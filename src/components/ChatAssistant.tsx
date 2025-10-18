@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Mic, Send, Sparkles, Wallet } from "lucide-react";
@@ -49,6 +49,11 @@ export const ChatAssistant = ({ goals, onContribute }: ChatAssistantProps) => {
     goalId?: string;
   }>({ open: false, amount: 0, percent: 10 });
 
+  // Anti-spam protection for Salary Insight
+  const COOLDOWN_MS = 10 * 60 * 1000; // 10 minutes
+  const lastSalaryTriggerRef = React.useRef(0);
+  const shownForThisTurnRef = React.useRef(false);
+
   const quickPrompts = [
     "Как накопить на квартиру?",
     "Посчитай расходы за месяц",
@@ -65,9 +70,17 @@ export const ChatAssistant = ({ goals, onContribute }: ChatAssistantProps) => {
     }
   };
 
-  const handleSimulateSalary = () => {
+  const canTriggerSalary = (): boolean => {
+    return Date.now() - lastSalaryTriggerRef.current >= COOLDOWN_MS;
+  };
+
+  const maybeShowSalaryInsight = (amount: number) => {
+    if (!canTriggerSalary() || shownForThisTurnRef.current) return;
+    
+    shownForThisTurnRef.current = true;
+    lastSalaryTriggerRef.current = Date.now();
+
     const rule = getSalaryRule();
-    const amount = 250000;
     const newMessage: SalarySuggestionMessage = {
       id: `salary-${Date.now()}`,
       role: "assistant",
@@ -81,6 +94,10 @@ export const ChatAssistant = ({ goals, onContribute }: ChatAssistantProps) => {
       rule,
     };
     setMessages((prev) => [...prev, newMessage]);
+  };
+
+  const handleSimulateSalary = () => {
+    maybeShowSalaryInsight(250000);
   };
 
   const handleSalaryMessageClick = (msg: SalarySuggestionMessage) => {
@@ -106,11 +123,6 @@ export const ChatAssistant = ({ goals, onContribute }: ChatAssistantProps) => {
     };
     setMessages((prev) => [...prev, confirmMsg]);
     setAllocationDialog({ open: false, amount: 0, percent: 10 });
-  };
-
-  const checkForSalaryKeywords = (text: string): boolean => {
-    const keywords = ["зарплата", "накопить", "отложить", "цель", "жалақы", "жинақтау"];
-    return keywords.some(keyword => text.toLowerCase().includes(keyword));
   };
 
   const handleSend = async () => {
@@ -170,6 +182,7 @@ export const ChatAssistant = ({ goals, onContribute }: ChatAssistantProps) => {
 
       const data = await response.json();
       const reply = data.choices?.[0]?.message?.content || "Извините, не могу ответить.";
+      const metadata = data.choices?.[0]?.message?.metadata;
 
       // Remove typing indicator and add real response
       setMessages((prev) => {
@@ -183,25 +196,14 @@ export const ChatAssistant = ({ goals, onContribute }: ChatAssistantProps) => {
         return [...filtered, responseMsg];
       });
 
-      // Check for salary-related keywords
-      if (checkForSalaryKeywords(reply)) {
-        setTimeout(() => {
-          const rule = getSalaryRule();
-          const salaryMsg: SalarySuggestionMessage = {
-            id: `salary-${Date.now()}`,
-            role: "assistant",
-            kind: "salary-suggestion",
-            event: {
-              amount: 250000,
-              date: new Date().toISOString(),
-              source: "salary",
-            },
-            suggestedPercent: rule.enabled ? rule.percent : 10,
-            rule,
-          };
-          setMessages((prev) => [...prev, salaryMsg]);
-        }, 800);
+      // Check for backend trigger (metadata from API)
+      if (metadata?.trigger === "salary_insight") {
+        const amount = metadata.amount ?? 250000;
+        setTimeout(() => maybeShowSalaryInsight(amount), 800);
       }
+
+      // Reset turn flag
+      shownForThisTurnRef.current = false;
     } catch (error) {
       // Remove typing indicator and show error
       setMessages((prev) => {
@@ -215,6 +217,7 @@ export const ChatAssistant = ({ goals, onContribute }: ChatAssistantProps) => {
         return [...filtered, errorMsg];
       });
       console.error("Chat API error:", error);
+      shownForThisTurnRef.current = false;
     } finally {
       setLoading(false);
     }
