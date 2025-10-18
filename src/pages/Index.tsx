@@ -3,9 +3,21 @@ import { ChatAssistant } from "@/components/ChatAssistant";
 import { GoalCard } from "@/components/GoalCard";
 import { ExpenseAnalytics } from "@/components/ExpenseAnalytics";
 import { ProductRecommendations } from "@/components/ProductRecommendations";
+import { SalaryInsight } from "@/components/SalaryInsight";
 import { Card } from "@/components/ui/card";
+import { useState } from "react";
+import { goals } from "@/data/mockGoals";
 
 const Index = () => {
+  const [goalContributions, setGoalContributions] = useState<Record<string, number>>({});
+
+  const handleContribute = (goalId: string, amount: number, date: string) => {
+    setGoalContributions(prev => ({
+      ...prev,
+      [goalId]: (prev[goalId] || 0) + amount
+    }));
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -18,7 +30,7 @@ const Index = () => {
               <ChatAssistant />
             </Card>
 
-            <GoalCard />
+            <GoalCard contributions={goalContributions} />
             
             <ExpenseAnalytics />
           </div>
@@ -26,6 +38,8 @@ const Index = () => {
           {/* Right Column - Sidebar */}
           <div className="space-y-6">
             <ProductRecommendations />
+
+            <SalaryInsight onContribute={handleContribute} />
 
             <Card className="p-6 shadow-card">
               <div className="space-y-4">

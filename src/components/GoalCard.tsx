@@ -15,7 +15,11 @@ const iconMap = {
   Car,
 };
 
-export const GoalCard = () => {
+interface GoalCardProps {
+  contributions?: Record<string, number>;
+}
+
+export const GoalCard = ({ contributions = {} }: GoalCardProps) => {
   const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
   const [goalDetail, setGoalDetail] = useState<GoalDetail | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -38,6 +42,10 @@ export const GoalCard = () => {
     return new Intl.NumberFormat("ru-KZ").format(amount);
   };
 
+  const getAdjustedAmount = (goalId: string, originalAmount: number) => {
+    return originalAmount + (contributions[goalId] || 0);
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -50,7 +58,8 @@ export const GoalCard = () => {
 
       <div className="grid gap-4 md:grid-cols-2">
         {goals.map((goal) => {
-          const progress = (goal.currentAmount / goal.targetAmount) * 100;
+          const adjustedAmount = getAdjustedAmount(goal.id, goal.currentAmount);
+          const progress = (adjustedAmount / goal.targetAmount) * 100;
           const Icon = iconMap[goal.icon as keyof typeof iconMap];
 
           return (
@@ -68,7 +77,7 @@ export const GoalCard = () => {
                     <div>
                       <h3 className="font-semibold text-foreground">{goal.title}</h3>
                       <p className="text-sm text-muted-foreground">
-                        {formatAmount(goal.currentAmount)} / {formatAmount(goal.targetAmount)} ₸
+                        {formatAmount(adjustedAmount)} / {formatAmount(goal.targetAmount)} ₸
                       </p>
                     </div>
                   </div>
@@ -82,7 +91,7 @@ export const GoalCard = () => {
                 <Progress value={progress} className="h-2" />
 
                 <div className="text-xs text-muted-foreground">
-                  Осталось накопить: {formatAmount(goal.targetAmount - goal.currentAmount)} ₸
+                  Осталось накопить: {formatAmount(goal.targetAmount - adjustedAmount)} ₸
                 </div>
               </div>
             </Card>
