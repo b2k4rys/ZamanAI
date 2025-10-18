@@ -137,20 +137,39 @@ export const ChatAssistant = ({ goals, onContribute }: ChatAssistantProps) => {
     setMessages((prev) => [...prev, typingMsg]);
 
     try {
-      const apiUrl = import.meta.env.VITE_CHAT_API_URL || "http://localhost:8000/api/chat";
-      
-      const response = await fetch(apiUrl, {
+      // Build conversation history for context
+      const conversationHistory = messages
+        .filter(m => m.kind === "text")
+        .map(m => ({
+          role: m.role === "user" ? "user" : "assistant",
+          content: m.content,
+        }));
+
+      const response = await fetch("https://openai-hub.neuraldeep.tech/chat/completions", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: userMessage }),
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer sk-roG3OusRr0TLCHAADks6lw",
+        },
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          messages: [
+            { 
+              role: "system", 
+              content: "You are Zaman AI — a friendly Islamic financial assistant from Zaman Bank. Help users with financial planning, savings goals, and Islamic banking principles. Respond in Russian or Kazakh based on user's language." 
+            },
+            ...conversationHistory,
+            { role: "user", content: userMessage },
+          ],
+        }),
       });
 
       if (!response.ok) {
-        throw new Error("Сетевая ошибка");
+        throw new Error(`API error: ${response.status}`);
       }
 
       const data = await response.json();
-      const reply = data.reply || "Извините, не могу ответить.";
+      const reply = data.choices?.[0]?.message?.content || "Извините, не могу ответить.";
 
       // Remove typing indicator and add real response
       setMessages((prev) => {
