@@ -11,6 +11,8 @@ export type ExpenseCategory =
   | 'Благотворительность'
   | 'Другое';
 
+export type Category = ExpenseCategory;
+
 export interface ExpenseRow {
   category: ExpenseCategory;
   amount: number;
@@ -31,3 +33,5 @@ export interface Customer {
   language: 'ru' | 'kk';
   txns: Transaction[];
 }
+
+export type { Transaction };

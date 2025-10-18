@@ -6,16 +6,18 @@ import { MerchantBreakdown } from "@/components/MerchantBreakdown";
 import { SubscriptionsList } from "@/components/SubscriptionsList";
 import { InsightsFeed } from "@/components/InsightsFeed";
 import { ProductRecommendations } from "@/components/ProductRecommendations";
+import { CustomerSelector } from "@/components/CustomerSelector";
+import { TransactionManager } from "@/components/TransactionManager";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { goals } from "@/data/mockGoals";
-import { customers } from "@/data/customers";
+import { useCustomer } from "@/contexts/CustomerContext";
 import { buildKPI, detectSubscriptions, getTopMerchants, getCategoryBreakdown, generateInsights } from "@/lib/analytics";
 
 const Index = () => {
   const [goalContributions, setGoalContributions] = useState<Record<string, number>>({});
-  const [selectedCustomer, setSelectedCustomer] = useState(customers[0]);
+  const { activeCustomer } = useCustomer();
 
   const handleContribute = (goalId: string, amount: number, date: string) => {
     setGoalContributions(prev => ({
@@ -24,12 +26,16 @@ const Index = () => {
     }));
   };
 
-  // Calculate analytics from customer transactions
-  const kpi = buildKPI(selectedCustomer.txns, selectedCustomer.monthlyIncome);
-  const subscriptions = detectSubscriptions(selectedCustomer.txns);
-  const topMerchants = getTopMerchants(kpi, 5);
-  const categoryBreakdown = getCategoryBreakdown(kpi);
-  const insights = generateInsights(kpi, subscriptions);
+  // Calculate analytics from active customer transactions (memoized for performance)
+  const analytics = useMemo(() => {
+    const kpi = buildKPI(activeCustomer.txns, activeCustomer.monthlyIncome);
+    const subscriptions = detectSubscriptions(activeCustomer.txns);
+    const topMerchants = getTopMerchants(kpi, 5);
+    const categoryBreakdown = getCategoryBreakdown(kpi);
+    const insights = generateInsights(kpi, subscriptions);
+    
+    return { kpi, subscriptions, topMerchants, categoryBreakdown, insights };
+  }, [activeCustomer]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -39,6 +45,9 @@ const Index = () => {
         <div className="grid gap-8 lg:grid-cols-3">
           {/* Left Column - Main Content */}
           <div className="lg:col-span-2 space-y-8">
+            {/* Customer Selector */}
+            <CustomerSelector />
+
             <Card className="overflow-hidden shadow-card">
               <ChatAssistant goals={goals} onContribute={handleContribute} />
             </Card>
@@ -47,31 +56,36 @@ const Index = () => {
             
             {/* Analytics Tabs */}
             <Tabs defaultValue="expenses" className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
+              <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="expenses">Расходы</TabsTrigger>
                 <TabsTrigger value="merchants">Мерчанты</TabsTrigger>
                 <TabsTrigger value="subscriptions">Подписки</TabsTrigger>
+                <TabsTrigger value="transactions">Транзакции</TabsTrigger>
               </TabsList>
               
               <TabsContent value="expenses" className="mt-6">
                 <div className="space-y-6">
                   <ExpenseAnalytics 
-                    categories={categoryBreakdown} 
-                    totalSpend={kpi.totalSpend} 
+                    categories={analytics.categoryBreakdown} 
+                    totalSpend={analytics.kpi.totalSpend} 
                   />
-                  <InsightsFeed insights={insights} />
+                  <InsightsFeed insights={analytics.insights} />
                 </div>
               </TabsContent>
               
               <TabsContent value="merchants" className="mt-6">
                 <MerchantBreakdown 
-                  merchants={topMerchants}
-                  subscriptions={subscriptions.map(s => s.merchant)}
+                  merchants={analytics.topMerchants}
+                  subscriptions={analytics.subscriptions.map(s => s.merchant)}
                 />
               </TabsContent>
               
               <TabsContent value="subscriptions" className="mt-6">
-                <SubscriptionsList subscriptions={subscriptions} />
+                <SubscriptionsList subscriptions={analytics.subscriptions} />
+              </TabsContent>
+              
+              <TabsContent value="transactions" className="mt-6">
+                <TransactionManager />
               </TabsContent>
             </Tabs>
           </div>

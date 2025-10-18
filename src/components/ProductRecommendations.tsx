@@ -1,15 +1,12 @@
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { TrendingUp, Shield, Wallet, Home, Car, ArrowRight, RefreshCw, User } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { TrendingUp, Shield, Wallet, Home, Car, ArrowRight } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { customers } from "@/data/customers";
 import { products } from "@/data/products";
-import { recommend, generateMonthVariation } from "@/lib/recommendations";
-import { Customer } from "@/types/customer";
+import { recommend } from "@/lib/recommendations";
 import { Product, ProductIcon } from "@/types/product";
-import { toast } from "@/hooks/use-toast";
+import { useCustomer } from "@/contexts/CustomerContext";
 
 const iconMap: Record<ProductIcon, typeof TrendingUp> = {
   growth: TrendingUp,
@@ -20,7 +17,7 @@ const iconMap: Record<ProductIcon, typeof TrendingUp> = {
 };
 
 export const ProductRecommendations = () => {
-  const [activeCustomer, setActiveCustomer] = useState<Customer>(customers[0]);
+  const { activeCustomer } = useCustomer();
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
   const recommendations = recommend(activeCustomer, products);
@@ -28,54 +25,10 @@ export const ProductRecommendations = () => {
   const totalExpenses = activeCustomer.expenses.reduce((sum, e) => sum + e.amount, 0);
   const freeCash = Math.max(activeCustomer.monthlyIncome - totalExpenses, 0);
 
-  const handleGenerateMonth = () => {
-    const varied = generateMonthVariation(activeCustomer);
-    setActiveCustomer(varied);
-    toast({
-      title: "Месяц сгенерирован",
-      description: "Расходы обновлены с учётом вариаций ±10%",
-    });
-  };
-
-  const handleCustomerChange = (customerId: string) => {
-    const customer = customers.find((c) => c.id === customerId);
-    if (customer) {
-      setActiveCustomer(customer);
-    }
-  };
-
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-4">
         <h2 className="text-2xl font-bold text-foreground">Рекомендовано вам</h2>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="flex items-center gap-2">
-          <User className="h-4 w-4 text-muted-foreground" />
-          <Select value={activeCustomer.id} onValueChange={handleCustomerChange}>
-            <SelectTrigger className="w-[160px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {customers.map((customer) => (
-                <SelectItem key={customer.id} value={customer.id}>
-                  {customer.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleGenerateMonth}
-          className="gap-2"
-        >
-          <RefreshCw className="h-4 w-4" />
-          Сгенерировать месяц
-        </Button>
       </div>
 
       <Card className="bg-primary/5 border-primary/20 p-4">

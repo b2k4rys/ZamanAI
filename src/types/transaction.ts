@@ -17,6 +17,7 @@ export interface Transaction {
   merchant?: string; // normalized
   category?: Category;
   mcc?: string;
+  note?: string;
 }
 
 export interface Subscription {
