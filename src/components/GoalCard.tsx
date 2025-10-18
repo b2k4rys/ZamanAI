@@ -2,24 +2,38 @@ import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Home, Plane, GraduationCap, Car, Plus } from "lucide-react";
+import { GoalDetailModal } from "./GoalDetailModal";
+import { useState } from "react";
+import { goals } from "@/data/mockGoals";
+import { getGoalDetail } from "@/data/mockGoals";
+import { GoalDetail } from "@/types/goal";
 
-interface Goal {
-  id: string;
-  title: string;
-  icon: typeof Home;
-  target: number;
-  current: number;
-  currency: string;
-}
-
-const goals: Goal[] = [
-  { id: "1", title: "Квартира", icon: Home, target: 15000000, current: 4500000, currency: "₸" },
-  { id: "2", title: "Хадж", icon: Plane, target: 2000000, current: 800000, currency: "₸" },
-  { id: "3", title: "Образование", icon: GraduationCap, target: 3000000, current: 1200000, currency: "₸" },
-  { id: "4", title: "Автомобиль", icon: Car, target: 8000000, current: 2400000, currency: "₸" },
-];
+const iconMap = {
+  Home,
+  Plane,
+  GraduationCap,
+  Car,
+};
 
 export const GoalCard = () => {
+  const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
+  const [goalDetail, setGoalDetail] = useState<GoalDetail | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const handleGoalClick = (goalId: string) => {
+    const detail = getGoalDetail(goalId);
+    if (detail) {
+      setGoalDetail(detail);
+      setSelectedGoalId(goalId);
+      setIsModalOpen(true);
+    }
+  };
+
+  const handleAddContribution = (amount: number, date: string) => {
+    // In a real app, this would update the backend
+    // For now, just close the modal
+    console.log("Add contribution:", amount, date);
+  };
   const formatAmount = (amount: number) => {
     return new Intl.NumberFormat("ru-KZ").format(amount);
   };
@@ -36,11 +50,15 @@ export const GoalCard = () => {
 
       <div className="grid gap-4 md:grid-cols-2">
         {goals.map((goal) => {
-          const progress = (goal.current / goal.target) * 100;
-          const Icon = goal.icon;
+          const progress = (goal.currentAmount / goal.targetAmount) * 100;
+          const Icon = iconMap[goal.icon as keyof typeof iconMap];
 
           return (
-            <Card key={goal.id} className="group overflow-hidden p-6 shadow-card transition-all hover:shadow-elevated">
+            <Card 
+              key={goal.id} 
+              className="group overflow-hidden p-6 shadow-card transition-all hover:shadow-elevated cursor-pointer"
+              onClick={() => handleGoalClick(goal.id)}
+            >
               <div className="space-y-4">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
@@ -50,7 +68,7 @@ export const GoalCard = () => {
                     <div>
                       <h3 className="font-semibold text-foreground">{goal.title}</h3>
                       <p className="text-sm text-muted-foreground">
-                        {formatAmount(goal.current)} / {formatAmount(goal.target)} {goal.currency}
+                        {formatAmount(goal.currentAmount)} / {formatAmount(goal.targetAmount)} ₸
                       </p>
                     </div>
                   </div>
@@ -64,13 +82,20 @@ export const GoalCard = () => {
                 <Progress value={progress} className="h-2" />
 
                 <div className="text-xs text-muted-foreground">
-                  Осталось накопить: {formatAmount(goal.target - goal.current)} {goal.currency}
+                  Осталось накопить: {formatAmount(goal.targetAmount - goal.currentAmount)} ₸
                 </div>
               </div>
             </Card>
           );
         })}
       </div>
+
+      <GoalDetailModal
+        goalDetail={goalDetail}
+        open={isModalOpen}
+        onOpenChange={setIsModalOpen}
+        onAddContribution={handleAddContribution}
+      />
     </div>
   );
 };
