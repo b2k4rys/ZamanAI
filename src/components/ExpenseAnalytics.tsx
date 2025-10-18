@@ -1,75 +1,72 @@
 import { Card } from "@/components/ui/card";
-import { ShoppingBag, Car as CarIcon, Heart, Home, TrendingDown } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { ShoppingCart, Car, Home, Tv, Heart, BookOpen, Activity, Package } from "lucide-react";
+import { CategoryBreakdown } from "@/types/transaction";
 
-interface ExpenseCategory {
-  name: string;
-  amount: number;
-  percentage: number;
-  icon: typeof ShoppingBag;
-  color: string;
+const categoryIcons: Record<string, any> = {
+  'Еда': ShoppingCart,
+  'Транспорт': Car,
+  'Дом': Home,
+  'Подписки': Tv,
+  'Развлечения': Activity,
+  'Образование': BookOpen,
+  'Благотворительность': Heart,
+  'Другое': Package,
+};
+
+interface ExpenseAnalyticsProps {
+  categories: CategoryBreakdown[];
+  totalSpend: number;
 }
 
-const expenses: ExpenseCategory[] = [
-  { name: "Еда и продукты", amount: 85000, percentage: 35, icon: ShoppingBag, color: "bg-primary" },
-  { name: "Транспорт", amount: 45000, percentage: 18, icon: CarIcon, color: "bg-secondary" },
-  { name: "Жилье", amount: 60000, percentage: 25, icon: Home, color: "bg-accent" },
-  { name: "Благотворительность", amount: 30000, percentage: 12, icon: Heart, color: "bg-muted" },
-];
-
-export const ExpenseAnalytics = () => {
-  const total = expenses.reduce((sum, exp) => sum + exp.amount, 0);
-
+export const ExpenseAnalytics = ({ categories, totalSpend }: ExpenseAnalyticsProps) => {
   return (
-    <Card className="p-6 shadow-card">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-foreground">Расходы за месяц</h2>
-          <p className="text-sm text-muted-foreground">
-            Всего: {new Intl.NumberFormat("ru-KZ").format(total)} ₸
-          </p>
-        </div>
-        <div className="flex items-center gap-2 rounded-lg bg-accent px-3 py-2">
-          <TrendingDown className="h-4 w-4 text-accent-foreground" />
-          <span className="text-sm font-medium text-accent-foreground">-12% от прошлого месяца</span>
-        </div>
+    <Card className="p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold text-foreground">Расходы по категориям</h3>
+        <p className="text-2xl font-bold text-primary">
+          {totalSpend.toLocaleString('ru-KZ')} ₸
+        </p>
       </div>
 
       <div className="space-y-4">
-        {expenses.map((expense) => {
-          const Icon = expense.icon;
+        {categories.map((category) => {
+          const Icon = categoryIcons[category.category] || ShoppingCart;
+          const hasTrend = category.trend !== undefined;
+          const trendUp = category.trend && category.trend > 0;
+          
           return (
-            <div key={expense.name} className="space-y-2">
+            <div key={category.category} className="space-y-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${expense.color}`}>
-                    <Icon className="h-5 w-5 text-primary-foreground" />
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                    <Icon className="h-4 w-4 text-primary" />
                   </div>
                   <div>
-                    <p className="font-medium text-foreground">{expense.name}</p>
-                    <p className="text-sm text-muted-foreground">{expense.percentage}% расходов</p>
+                    <p className="font-medium text-foreground">{category.category}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {category.percentage.toFixed(1)}% от бюджета
+                      {hasTrend && (
+                        <span className={trendUp ? 'text-destructive ml-2' : 'text-primary ml-2'}>
+                          {trendUp ? '↑' : '↓'} {Math.abs(category.trend!).toFixed(0)}%
+                        </span>
+                      )}
+                    </p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="font-semibold text-foreground">
-                    {new Intl.NumberFormat("ru-KZ").format(expense.amount)} ₸
-                  </p>
-                </div>
+                <p className="font-semibold text-foreground">
+                  {category.amount.toLocaleString('ru-KZ')} ₸
+                </p>
               </div>
-              <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                <div
-                  className={`h-full ${expense.color} transition-all duration-500`}
-                  style={{ width: `${expense.percentage}%` }}
-                />
-              </div>
+              <Progress value={category.percentage} className="h-2" />
             </div>
           );
         })}
       </div>
 
-      <div className="mt-6 rounded-lg bg-accent p-4">
-        <p className="text-sm text-accent-foreground">
-          💡 <span className="font-semibold">Совет:</span> Попробуйте сократить расходы на еду на 10% — 
-          это поможет накопить дополнительно 8,500 ₸ в месяц на ваши цели.
+      <div className="pt-4 border-t border-border">
+        <p className="text-sm text-muted-foreground italic">
+          💡 Совет: Сократите импульсные траты на 10% — это ~{(totalSpend * 0.1).toLocaleString('ru-KZ')} ₸ в месяц на цели
         </p>
       </div>
     </Card>

@@ -1,3 +1,5 @@
+import { Transaction } from "./transaction";
+
 export type ExpenseCategory = 
   | 'Еда'
   | 'Транспорт'
@@ -27,4 +29,5 @@ export interface Customer {
   savingsNow: number;
   goals?: CustomerGoal[];
   language: 'ru' | 'kk';
+  txns: Transaction[];
 }

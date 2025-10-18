@@ -1,4 +1,5 @@
 import { Customer } from "@/types/customer";
+import { generateAidanaTxns, generateErlanTxns, generateAliyaTxns, generateDaniyarTxns } from "./generateTransactions";
 
 export const customers: Customer[] = [
   {
@@ -19,6 +20,7 @@ export const customers: Customer[] = [
       { title: "Подушка безопасности", target: 1000000 },
     ],
     language: "ru",
+    txns: generateAidanaTxns(),
   },
   {
     id: "erlan",
@@ -38,6 +40,7 @@ export const customers: Customer[] = [
       { title: "Образование детей", target: 5000000 },
     ],
     language: "ru",
+    txns: generateErlanTxns(),
   },
   {
     id: "aliya",
@@ -57,6 +60,7 @@ export const customers: Customer[] = [
       { title: "Благотворительность", target: 1000000 },
     ],
     language: "ru",
+    txns: generateAliyaTxns(),
   },
   {
     id: "daniyar",
@@ -76,5 +80,6 @@ export const customers: Customer[] = [
       { title: "Пассивный доход", target: 5000000 },
     ],
     language: "ru",
+    txns: generateDaniyarTxns(),
   },
 ];
