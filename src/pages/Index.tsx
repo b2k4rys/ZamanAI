@@ -69,7 +69,7 @@ const Index = () => {
             {/* Customer Selector */}
             <CustomerSelector />
 
-            <Card className="overflow-hidden shadow-card">
+            <div className="relative">
               <ChatAssistant 
                 goals={goals} 
                 onContribute={handleContribute}
@@ -77,7 +77,7 @@ const Index = () => {
                 onShowExpenseBreakdown={handleShowExpenseBreakdown}
                 onShowProductRecs={handleShowProductRecs}
               />
-            </Card>
+            </div>
 
             <GoalCard contributions={goalContributions} />
             

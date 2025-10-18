@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Mic, Send, Sparkles, Wallet } from "lucide-react";
+import { Mic, Send, Sparkles, Wallet, Trash2, Maximize2, Minimize2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Goal } from "@/types/goal";
@@ -11,6 +11,18 @@ import { AssistantMessage } from "./AssistantMessage";
 import { useCustomer } from "@/contexts/CustomerContext";
 import { buildSnapshot, parseAction, type ActionCommand } from "@/lib/customerSnapshot";
 import { toast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useChatStorage, DEFAULT_CHAT_SIZE } from "@/hooks/useChatStorage";
+import { useChatResize } from "@/hooks/useChatResize";
 
 type TextMessage = {
   id: string;
@@ -47,7 +59,21 @@ export const ChatAssistant = ({
 }: ChatAssistantProps) => {
   const { activeCustomer, addTransaction } = useCustomer();
   
+  // Chat size management
+  const [chatSize, setChatSize] = useChatStorage('zaman.chat.size', DEFAULT_CHAT_SIZE);
+  const { size, isResizing, startResize, toggleMode } = useChatResize(chatSize, setChatSize);
+  
+  // Clear chat dialog
+  const [isClearDialogOpen, setIsClearDialogOpen] = useState(false);
+  
   // Load messages from localStorage
+  const getWelcomeMessage = (): TextMessage => ({
+    id: "welcome",
+    role: "assistant",
+    kind: "text",
+    content: `Здравствуйте, ${activeCustomer.name}! 🌿 Я — Zaman AI, ваш финансовый помощник. Расскажите, чем могу помочь сегодня?`,
+  });
+
   const loadMessages = (): Message[] => {
     try {
       const stored = localStorage.getItem(`zaman.chat.${activeCustomer.id}`);
@@ -57,14 +83,7 @@ export const ChatAssistant = ({
     } catch (e) {
       console.error("Failed to load chat history", e);
     }
-    return [
-      {
-        id: "welcome",
-        role: "assistant",
-        kind: "text",
-        content: `Здравствуйте, ${activeCustomer.name}! 🌿 Я — Zaman AI, ваш финансовый помощник. Расскажите, чем могу помочь сегодня?`,
-      },
-    ];
+    return [getWelcomeMessage()];
   };
 
   const [messages, setMessages] = useState<Message[]>(loadMessages());
@@ -77,6 +96,19 @@ export const ChatAssistant = ({
     goalId?: string;
   }>({ open: false, amount: 0, percent: 10 });
 
+  // Clear chat functionality
+  const clearChat = () => {
+    setMessages([getWelcomeMessage()]);
+    setInput("");
+    localStorage.removeItem(`zaman.chat.${activeCustomer.id}`);
+    localStorage.removeItem(`zaman.chat.draft.${activeCustomer.id}`);
+    toast({
+      title: "Чат очищен",
+      description: "История диалога удалена",
+    });
+    setIsClearDialogOpen(false);
+  };
+
   // Save messages to localStorage whenever they change
   React.useEffect(() => {
     try {
@@ -85,6 +117,19 @@ export const ChatAssistant = ({
       console.error("Failed to save chat history", e);
     }
   }, [messages, activeCustomer.id]);
+
+  // Save draft
+  React.useEffect(() => {
+    if (input) {
+      localStorage.setItem(`zaman.chat.draft.${activeCustomer.id}`, input);
+    }
+  }, [input, activeCustomer.id]);
+
+  // Load draft
+  React.useEffect(() => {
+    const draft = localStorage.getItem(`zaman.chat.draft.${activeCustomer.id}`);
+    if (draft) setInput(draft);
+  }, [activeCustomer.id]);
 
   // Update welcome message when customer changes
   React.useEffect(() => {
@@ -101,6 +146,19 @@ export const ChatAssistant = ({
       ]);
     }
   }, [activeCustomer.id]);
+
+  // Keyboard shortcuts
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        setIsClearDialogOpen(true);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // Anti-spam protection for Salary Insight
   const COOLDOWN_MS = 10 * 60 * 1000; // 10 minutes
@@ -379,16 +437,50 @@ export const ChatAssistant = ({
     return new Intl.NumberFormat("ru-KZ").format(amount);
   };
 
+  const containerStyle: React.CSSProperties = size.mode === 'fullscreen' 
+    ? { width: '100%', height: '100%' }
+    : { width: `${size.w}px`, height: `${size.h}px` };
+
   return (
-    <div className="flex h-[600px] flex-col bg-gradient-to-b from-primary/5 to-background">
-      <div className="border-b border-border bg-card p-4 shadow-sm">
-        <div className="flex items-center gap-3 mb-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-            <Sparkles className="h-5 w-5 text-primary" />
+    <div 
+      className="relative flex flex-col bg-gradient-to-b from-primary/5 to-background rounded-2xl shadow-2xl transition-all duration-200 overflow-hidden"
+      style={containerStyle}
+    >
+      <div className="border-b border-border bg-card p-4 shadow-sm rounded-t-2xl">
+        <div className="flex items-center justify-between gap-3 mb-3">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+              <Sparkles className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-foreground">Zaman AI</h3>
+              <p className="text-xs text-muted-foreground">Ваш финансовый помощник</p>
+            </div>
           </div>
-          <div>
-            <h3 className="font-semibold text-foreground">Zaman AI</h3>
-            <p className="text-xs text-muted-foreground">Ваш финансовый помощник</p>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={() => setIsClearDialogOpen(true)}
+              size="sm"
+              variant="ghost"
+              className="gap-2 hover:bg-destructive/10 hover:text-destructive"
+              title="Очистить чат (Ctrl+K)"
+            >
+              <Trash2 className="h-4 w-4" />
+              <span className="hidden sm:inline">Очистить</span>
+            </Button>
+            <Button
+              onClick={toggleMode}
+              size="sm"
+              variant="ghost"
+              className="gap-2 hover:bg-accent"
+              title={size.mode === 'fullscreen' ? 'Свернуть' : 'Развернуть'}
+            >
+              {size.mode === 'fullscreen' ? (
+                <Minimize2 className="h-4 w-4" />
+              ) : (
+                <Maximize2 className="h-4 w-4" />
+              )}
+            </Button>
           </div>
         </div>
         <Button
@@ -548,6 +640,41 @@ export const ChatAssistant = ({
         initialGoalId={allocationDialog.goalId}
         onConfirm={handleConfirmAllocation}
       />
+
+      <AlertDialog open={isClearDialogOpen} onOpenChange={setIsClearDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Очистить диалог с Zaman AI?</AlertDialogTitle>
+            <AlertDialogDescription>
+              История и черновик будут удалены. Это действие нельзя отменить.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Отмена</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={clearChat}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              Очистить
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Resize handle */}
+      {size.mode === 'docked' && (
+        <div
+          onPointerDown={startResize}
+          className="absolute bottom-0 right-0 w-6 h-6 cursor-nwse-resize group"
+          style={{ touchAction: 'none' }}
+        >
+          <div className="absolute bottom-1 right-1 w-4 h-4 border-r-2 border-b-2 border-border group-hover:border-primary transition-colors" />
+        </div>
+      )}
+      
+      {isResizing && (
+        <div className="fixed inset-0 z-50 cursor-nwse-resize" style={{ touchAction: 'none' }} />
+      )}
     </div>
   );
 };
