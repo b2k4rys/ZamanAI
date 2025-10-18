@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Goal } from "@/types/goal";
 import { SalaryEvent, SalaryRule } from "@/types/salary";
 import { GoalAllocationDialog } from "./GoalAllocationDialog";
+import { AssistantMessage } from "./AssistantMessage";
 
 type TextMessage = {
   id: string;
@@ -313,16 +314,20 @@ export const ChatAssistant = ({ goals, onContribute }: ChatAssistantProps) => {
                 className={`max-w-[80%] p-4 ${
                   message.role === "user"
                     ? "bg-primary text-primary-foreground"
-                    : "bg-accent text-accent-foreground"
+                    : "bg-card text-card-foreground shadow-card"
                 }`}
               >
                 {message.role === "assistant" && (
-                  <div className="mb-2 flex items-center gap-2">
-                    <Sparkles className="h-4 w-4" />
+                  <div className="mb-3 flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-primary" />
                     <span className="text-xs font-semibold">Zaman AI</span>
                   </div>
                 )}
-                <p className="text-sm">{message.content}</p>
+                {message.role === "assistant" ? (
+                  <AssistantMessage content={message.content} />
+                ) : (
+                  <p className="text-sm">{message.content}</p>
+                )}
               </Card>
             </div>
           );
