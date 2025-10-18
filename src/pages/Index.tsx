@@ -3,7 +3,6 @@ import { ChatAssistant } from "@/components/ChatAssistant";
 import { GoalCard } from "@/components/GoalCard";
 import { ExpenseAnalytics } from "@/components/ExpenseAnalytics";
 import { ProductRecommendations } from "@/components/ProductRecommendations";
-import { SalaryInsight } from "@/components/SalaryInsight";
 import { Card } from "@/components/ui/card";
 import { useState } from "react";
 import { goals } from "@/data/mockGoals";
@@ -27,7 +26,7 @@ const Index = () => {
           {/* Left Column - Main Chat */}
           <div className="lg:col-span-2 space-y-8">
             <Card className="overflow-hidden shadow-card">
-              <ChatAssistant />
+              <ChatAssistant goals={goals} onContribute={handleContribute} />
             </Card>
 
             <GoalCard contributions={goalContributions} />
@@ -38,8 +37,6 @@ const Index = () => {
           {/* Right Column - Sidebar */}
           <div className="space-y-6">
             <ProductRecommendations />
-
-            <SalaryInsight onContribute={handleContribute} />
 
             <Card className="p-6 shadow-card">
               <div className="space-y-4">

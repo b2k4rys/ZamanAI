@@ -1,7 +1,7 @@
 export type SalaryRule = {
   enabled: boolean;
   percent: number; // 5..30, default 10
-  goalId: string; // куда копим
+  goalId?: string; // куда копим
 };
 
 export type SalaryEvent = {
