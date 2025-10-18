@@ -17,6 +17,7 @@ import { buildKPI, detectSubscriptions, getTopMerchants, getCategoryBreakdown, g
 
 const Index = () => {
   const [goalContributions, setGoalContributions] = useState<Record<string, number>>({});
+  const [activeTab, setActiveTab] = useState("expenses");
   const { activeCustomer } = useCustomer();
 
   const handleContribute = (goalId: string, amount: number, date: string) => {
@@ -24,6 +25,26 @@ const Index = () => {
       ...prev,
       [goalId]: (prev[goalId] || 0) + amount
     }));
+  };
+
+  const handleCreateGoal = (title: string, target: number, deadline?: string) => {
+    // For now, just show a toast - would integrate with actual goal management
+    console.log("Create goal:", { title, target, deadline });
+  };
+
+  const handleShowExpenseBreakdown = (category?: string, merchant?: string) => {
+    // Switch to appropriate tab
+    if (merchant) {
+      setActiveTab("merchants");
+    } else if (category) {
+      setActiveTab("expenses");
+    }
+  };
+
+  const handleShowProductRecs = () => {
+    // Scroll to product recommendations
+    const element = document.getElementById("product-recommendations");
+    element?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   // Calculate analytics from active customer transactions (memoized for performance)
@@ -49,13 +70,19 @@ const Index = () => {
             <CustomerSelector />
 
             <Card className="overflow-hidden shadow-card">
-              <ChatAssistant goals={goals} onContribute={handleContribute} />
+              <ChatAssistant 
+                goals={goals} 
+                onContribute={handleContribute}
+                onCreateGoal={handleCreateGoal}
+                onShowExpenseBreakdown={handleShowExpenseBreakdown}
+                onShowProductRecs={handleShowProductRecs}
+              />
             </Card>
 
             <GoalCard contributions={goalContributions} />
             
             {/* Analytics Tabs */}
-            <Tabs defaultValue="expenses" className="w-full">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="expenses">Расходы</TabsTrigger>
                 <TabsTrigger value="merchants">Мерчанты</TabsTrigger>
@@ -91,7 +118,7 @@ const Index = () => {
           </div>
 
           {/* Right Column - Sidebar */}
-          <div className="space-y-6">
+          <div className="space-y-6" id="product-recommendations">
             <ProductRecommendations />
 
             <Card className="p-6 shadow-card">

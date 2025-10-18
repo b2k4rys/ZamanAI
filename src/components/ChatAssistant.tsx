@@ -8,6 +8,9 @@ import { Goal } from "@/types/goal";
 import { SalaryEvent, SalaryRule } from "@/types/salary";
 import { GoalAllocationDialog } from "./GoalAllocationDialog";
 import { AssistantMessage } from "./AssistantMessage";
+import { useCustomer } from "@/contexts/CustomerContext";
+import { buildSnapshot, parseAction, type ActionCommand } from "@/lib/customerSnapshot";
+import { toast } from "@/hooks/use-toast";
 
 type TextMessage = {
   id: string;
@@ -30,9 +33,19 @@ type Message = TextMessage | SalarySuggestionMessage;
 interface ChatAssistantProps {
   goals: Goal[];
   onContribute: (goalId: string, amount: number, date: string) => void;
+  onCreateGoal?: (title: string, target: number, deadline?: string) => void;
+  onShowExpenseBreakdown?: (category?: string, merchant?: string) => void;
+  onShowProductRecs?: () => void;
 }
 
-export const ChatAssistant = ({ goals, onContribute }: ChatAssistantProps) => {
+export const ChatAssistant = ({ 
+  goals, 
+  onContribute, 
+  onCreateGoal,
+  onShowExpenseBreakdown,
+  onShowProductRecs 
+}: ChatAssistantProps) => {
+  const { activeCustomer, addTransaction } = useCustomer();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "welcome",
@@ -126,6 +139,74 @@ export const ChatAssistant = ({ goals, onContribute }: ChatAssistantProps) => {
     setAllocationDialog({ open: false, amount: 0, percent: 10 });
   };
 
+  const executeAction = (action: ActionCommand) => {
+    switch (action.type) {
+      case 'allocate_to_goal': {
+        const goal = goals.find(g => g.id === action.goalId);
+        if (goal) {
+          onContribute(action.goalId, action.amount, new Date().toISOString());
+          
+          // Add savings transaction
+          addTransaction({
+            date: new Date().toISOString(),
+            amount: -action.amount,
+            rawMerchant: `Накопление: ${goal.title}`,
+            note: `Автосейв ${action.source || 'manual'}`,
+          });
+
+          const confirmMsg: TextMessage = {
+            id: `action-confirm-${Date.now()}`,
+            role: "assistant",
+            kind: "text",
+            content: `✅ Отложено ${formatAmount(action.amount)} ₸ на «${goal.title}»`,
+          };
+          setMessages((prev) => [...prev, confirmMsg]);
+        }
+        break;
+      }
+      case 'create_goal': {
+        if (onCreateGoal) {
+          onCreateGoal(action.title, action.target, action.deadline);
+          const confirmMsg: TextMessage = {
+            id: `action-confirm-${Date.now()}`,
+            role: "assistant",
+            kind: "text",
+            content: `✅ Создана цель «${action.title}» на ${formatAmount(action.target)} ₸`,
+          };
+          setMessages((prev) => [...prev, confirmMsg]);
+        }
+        break;
+      }
+      case 'show_expense_breakdown': {
+        if (onShowExpenseBreakdown) {
+          onShowExpenseBreakdown(action.category, action.merchant);
+        }
+        toast({
+          title: "Открываю аналитику",
+          description: action.category ? `Категория: ${action.category}` : "Общие расходы",
+        });
+        break;
+      }
+      case 'show_product_recs': {
+        if (onShowProductRecs) {
+          onShowProductRecs();
+        }
+        toast({
+          title: "Открываю рекомендации",
+          description: "Продукты подобраны под ваш профиль",
+        });
+        break;
+      }
+      case 'set_limit': {
+        toast({
+          title: "Лимит установлен",
+          description: `${action.merchant}: ${formatAmount(action.monthly)} ₸/мес`,
+        });
+        break;
+      }
+    }
+  };
+
   const handleSend = async () => {
     if (!input.trim() || loading) return;
     
@@ -150,6 +231,9 @@ export const ChatAssistant = ({ goals, onContribute }: ChatAssistantProps) => {
     setMessages((prev) => [...prev, typingMsg]);
 
     try {
+      // Build customer snapshot
+      const snapshot = buildSnapshot(activeCustomer, goals);
+      
       // Build conversation history for context
       const conversationHistory = messages
         .filter(m => m.kind === "text")
@@ -157,6 +241,13 @@ export const ChatAssistant = ({ goals, onContribute }: ChatAssistantProps) => {
           role: m.role === "user" ? "user" : "assistant",
           content: m.content,
         }));
+
+      const systemPrompt = `You are Zaman AI — a friendly Islamic financial assistant from Zaman Bank. Be concise, supportive, halal-aligned.
+
+IF user asks about spending, use the ACTIVE_CUSTOMER_SNAPSHOT to cite exact numbers.
+When suggesting actions (like saving to a goal), output a JSON action after a line that contains exactly @@ACTION.
+Keep text short. Respect language from snapshot; if language:'kk' — reply in Kazakh.
+Avoid generic advice without numbers from the snapshot.`;
 
       const response = await fetch("https://openai-hub.neuraldeep.tech/chat/completions", {
         method: "POST",
@@ -167,10 +258,8 @@ export const ChatAssistant = ({ goals, onContribute }: ChatAssistantProps) => {
         body: JSON.stringify({
           model: "gpt-4o-mini",
           messages: [
-            { 
-              role: "system", 
-              content: "You are Zaman AI — a friendly Islamic financial assistant from Zaman Bank. Help users with financial planning, savings goals, and Islamic banking principles. Respond in Russian or Kazakh based on user's language." 
-            },
+            { role: "system", content: systemPrompt },
+            { role: "system", content: `ACTIVE_CUSTOMER_SNAPSHOT:${JSON.stringify(snapshot)}` },
             ...conversationHistory,
             { role: "user", content: userMessage },
           ],
@@ -183,7 +272,12 @@ export const ChatAssistant = ({ goals, onContribute }: ChatAssistantProps) => {
 
       const data = await response.json();
       const reply = data.choices?.[0]?.message?.content || "Извините, не могу ответить.";
-      const metadata = data.choices?.[0]?.message?.metadata;
+
+      // Parse action from response
+      const action = parseAction(reply);
+      
+      // Clean reply text (remove @@ACTION block if present)
+      const cleanReply = reply.split('@@ACTION')[0].trim();
 
       // Remove typing indicator and add real response
       setMessages((prev) => {
@@ -192,15 +286,14 @@ export const ChatAssistant = ({ goals, onContribute }: ChatAssistantProps) => {
           id: `assistant-${Date.now()}`,
           role: "assistant",
           kind: "text",
-          content: reply,
+          content: cleanReply,
         };
         return [...filtered, responseMsg];
       });
 
-      // Check for backend trigger (metadata from API)
-      if (metadata?.trigger === "salary_insight") {
-        const amount = metadata.amount ?? 250000;
-        setTimeout(() => maybeShowSalaryInsight(amount), 800);
+      // Execute action if present
+      if (action) {
+        setTimeout(() => executeAction(action), 500);
       }
 
       // Reset turn flag
