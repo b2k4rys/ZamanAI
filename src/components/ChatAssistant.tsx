@@ -41,6 +41,7 @@ export const ChatAssistant = ({ goals, onContribute }: ChatAssistantProps) => {
     },
   ]);
   const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
   const [allocationDialog, setAllocationDialog] = useState<{
     open: boolean;
     amount: number;
@@ -107,27 +108,97 @@ export const ChatAssistant = ({ goals, onContribute }: ChatAssistantProps) => {
     setAllocationDialog({ open: false, amount: 0, percent: 10 });
   };
 
-  const handleSend = () => {
-    if (!input.trim()) return;
+  const checkForSalaryKeywords = (text: string): boolean => {
+    const keywords = ["зарплата", "накопить", "отложить", "цель", "жалақы", "жинақтау"];
+    return keywords.some(keyword => text.toLowerCase().includes(keyword));
+  };
+
+  const handleSend = async () => {
+    if (!input.trim() || loading) return;
+    
+    const userMessage = input;
     const newMsg: TextMessage = {
       id: `user-${Date.now()}`,
       role: "user",
       kind: "text",
-      content: input,
+      content: userMessage,
     };
     setMessages((prev) => [...prev, newMsg]);
     setInput("");
+    setLoading(true);
 
-    // Simulate assistant response
-    setTimeout(() => {
-      const responseMsg: TextMessage = {
-        id: `assistant-${Date.now()}`,
-        role: "assistant",
-        kind: "text",
-        content: "Отличный вопрос! Давайте вместе разберемся с вашими финансами.",
-      };
-      setMessages((prev) => [...prev, responseMsg]);
-    }, 1000);
+    // Add typing indicator
+    const typingMsg: TextMessage = {
+      id: "typing",
+      role: "assistant",
+      kind: "text",
+      content: "typing...",
+    };
+    setMessages((prev) => [...prev, typingMsg]);
+
+    try {
+      const apiUrl = import.meta.env.VITE_CHAT_API_URL || "http://localhost:8000/api/chat";
+      
+      const response = await fetch(apiUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: userMessage }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Сетевая ошибка");
+      }
+
+      const data = await response.json();
+      const reply = data.reply || "Извините, не могу ответить.";
+
+      // Remove typing indicator and add real response
+      setMessages((prev) => {
+        const filtered = prev.filter(m => m.id !== "typing");
+        const responseMsg: TextMessage = {
+          id: `assistant-${Date.now()}`,
+          role: "assistant",
+          kind: "text",
+          content: reply,
+        };
+        return [...filtered, responseMsg];
+      });
+
+      // Check for salary-related keywords
+      if (checkForSalaryKeywords(reply)) {
+        setTimeout(() => {
+          const rule = getSalaryRule();
+          const salaryMsg: SalarySuggestionMessage = {
+            id: `salary-${Date.now()}`,
+            role: "assistant",
+            kind: "salary-suggestion",
+            event: {
+              amount: 250000,
+              date: new Date().toISOString(),
+              source: "salary",
+            },
+            suggestedPercent: rule.enabled ? rule.percent : 10,
+            rule,
+          };
+          setMessages((prev) => [...prev, salaryMsg]);
+        }, 800);
+      }
+    } catch (error) {
+      // Remove typing indicator and show error
+      setMessages((prev) => {
+        const filtered = prev.filter(m => m.id !== "typing");
+        const errorMsg: TextMessage = {
+          id: `error-${Date.now()}`,
+          role: "assistant",
+          kind: "text",
+          content: "Кажется, соединение нестабильно. Попробуем снова?",
+        };
+        return [...filtered, errorMsg];
+      });
+      console.error("Chat API error:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const formatAmount = (amount: number) => {
@@ -192,6 +263,25 @@ export const ChatAssistant = ({ goals, onContribute }: ChatAssistantProps) => {
             );
           }
 
+          // Typing indicator
+          if (message.id === "typing" && message.content === "typing...") {
+            return (
+              <div key={message.id} className="flex justify-start fade-in">
+                <Card className="max-w-[80%] bg-accent p-4 text-accent-foreground">
+                  <div className="mb-2 flex items-center gap-2">
+                    <Sparkles className="h-4 w-4" />
+                    <span className="text-xs font-semibold">Zaman AI</span>
+                  </div>
+                  <div className="flex gap-1">
+                    <span className="h-2 w-2 animate-bounce rounded-full bg-primary [animation-delay:-0.3s]"></span>
+                    <span className="h-2 w-2 animate-bounce rounded-full bg-primary [animation-delay:-0.15s]"></span>
+                    <span className="h-2 w-2 animate-bounce rounded-full bg-primary"></span>
+                  </div>
+                </Card>
+              </div>
+            );
+          }
+
           return (
             <div
               key={message.id}
@@ -247,7 +337,12 @@ export const ChatAssistant = ({ goals, onContribute }: ChatAssistantProps) => {
           >
             <Mic className="h-4 w-4" />
           </Button>
-          <Button onClick={handleSend} size="icon" className="bg-primary hover:bg-primary-hover">
+          <Button 
+            onClick={handleSend} 
+            size="icon" 
+            className="bg-primary hover:bg-primary-hover"
+            disabled={loading}
+          >
             <Send className="h-4 w-4" />
           </Button>
         </div>
