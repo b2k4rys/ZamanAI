@@ -3,11 +3,8 @@ import { ChatAssistant } from "@/components/ChatAssistant";
 import { Goals } from "@/pages/Goals";
 import { Analytics } from "@/pages/Analytics";
 import { Challenges } from "@/pages/Challenges";
-import { ProductRecommendations } from "@/components/ProductRecommendations";
 import { CustomerSelector } from "@/components/CustomerSelector";
-import { ReflectionCard } from "@/components/ReflectionCard";
 import { ReflectionModal } from "@/components/ReflectionModal";
-import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState, useMemo, useEffect } from "react";
 import { getGoals } from "@/lib/goalsRepository";
@@ -59,9 +56,8 @@ const Index = () => {
   };
 
   const handleShowProductRecs = () => {
-    // Scroll to product recommendations
-    const element = document.getElementById("product-recommendations");
-    element?.scrollIntoView({ behavior: "smooth", block: "start" });
+    // Products are now shown in chat
+    console.log("Products shown in chat");
   };
 
   const handleInsightAction = (action: string, insight: any) => {
@@ -102,109 +98,64 @@ const Index = () => {
       <Navbar />
       
       <main className="container mx-auto px-4 py-8">
-        <div className="grid gap-8 lg:grid-cols-3">
-          {/* Left Column - Main Content */}
-          <div className="lg:col-span-2 space-y-8">
-            {/* Customer Selector */}
-            <CustomerSelector />
+        <div className="max-w-7xl mx-auto">
+          {/* Customer Selector */}
+          <CustomerSelector />
 
-            {/* Main Navigation Tabs */}
-            <Tabs value={activeMainTab} onValueChange={setActiveMainTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-4 h-12">
-                <TabsTrigger value="assistant" className="gap-2 text-base">
-                  💬 Ассистент
-                </TabsTrigger>
-                <TabsTrigger value="goals" className="gap-2 text-base">
-                  🎯 Мои цели
-                </TabsTrigger>
-                <TabsTrigger value="challenges" className="gap-2 text-base">
-                  ⚡ Челленджи
-                </TabsTrigger>
-                <TabsTrigger value="analytics" className="gap-2 text-base">
-                  📊 Аналитика
-                </TabsTrigger>
-              </TabsList>
+          {/* Main Navigation Tabs */}
+          <Tabs value={activeMainTab} onValueChange={setActiveMainTab} className="w-full mt-8">
+            <TabsList className="grid w-full grid-cols-4 h-12">
+              <TabsTrigger value="assistant" className="gap-2 text-base">
+                💬 Ассистент
+              </TabsTrigger>
+              <TabsTrigger value="goals" className="gap-2 text-base">
+                🎯 Мои цели
+              </TabsTrigger>
+              <TabsTrigger value="challenges" className="gap-2 text-base">
+                ⚡ Челленджи
+              </TabsTrigger>
+              <TabsTrigger value="analytics" className="gap-2 text-base">
+                📊 Аналитика
+              </TabsTrigger>
+            </TabsList>
 
-              <TabsContent value="assistant" className="mt-6 space-y-8">
-                <div className="relative">
-                  <ChatAssistant 
-                    goals={customerGoals}
-                    challenges={[]} // TODO: Pass actual challenges from context
-                    onContribute={handleContribute}
-                    onCreateGoal={handleCreateGoal}
-                    onShowExpenseBreakdown={handleShowExpenseBreakdown}
-                    onShowProductRecs={handleShowProductRecs}
-                    onShowGoals={handleShowGoals}
-                    onShowChallenges={handleShowChallenges}
-                  />
-                </div>
-              </TabsContent>
-
-              <TabsContent value="goals" className="mt-6">
-                <Goals contributions={goalContributions} />
-              </TabsContent>
-
-              <TabsContent value="challenges" className="mt-6">
-                <Challenges />
-              </TabsContent>
-
-              <TabsContent value="analytics" className="mt-6">
-                <Analytics 
-                  kpi={analytics.kpi}
-                  subscriptions={analytics.subscriptions}
-                  topMerchants={analytics.topMerchants}
-                  categoryBreakdown={analytics.categoryBreakdown}
-                  insights={analytics.insights}
-                  transactions={activeCustomer.txns}
-                  activeAnalyticsTab={activeAnalyticsTab}
-                  onAnalyticsTabChange={setActiveAnalyticsTab}
-                  onInsightAction={handleInsightAction}
+            <TabsContent value="assistant" className="mt-6 space-y-8">
+              <div className="relative">
+                <ChatAssistant 
+                  goals={customerGoals}
+                  challenges={[]} // TODO: Pass actual challenges from context
+                  onContribute={handleContribute}
+                  onCreateGoal={handleCreateGoal}
+                  onShowExpenseBreakdown={handleShowExpenseBreakdown}
+                  onShowProductRecs={handleShowProductRecs}
+                  onShowGoals={handleShowGoals}
+                  onShowChallenges={handleShowChallenges}
                 />
-              </TabsContent>
-            </Tabs>
-          </div>
-
-          {/* Right Column - Sidebar */}
-          <div className="space-y-6" id="product-recommendations">
-            <ReflectionCard onOpen={() => setReflectionOpen(true)} />
-            
-            <ProductRecommendations />
-
-            <Card className="p-6 shadow-card">
-              <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <div className="h-8 w-8 rounded-full bg-secondary breath-animation" />
-                  <h3 className="font-semibold text-foreground">Советы для спокойствия</h3>
-                </div>
-                
-                <div className="space-y-3 text-sm text-muted-foreground">
-                  <div className="rounded-lg bg-accent p-3">
-                    <p className="font-medium text-accent-foreground">🌬️ Дыхательная практика</p>
-                    <p className="mt-1 text-xs">4 сек вдох, 4 сек выдох</p>
-                  </div>
-                  
-                  <div className="rounded-lg bg-accent p-3">
-                    <p className="font-medium text-accent-foreground">🚶 Прогулка на свежем воздухе</p>
-                    <p className="mt-1 text-xs">15 минут в день</p>
-                  </div>
-                  
-                  <div className="rounded-lg bg-accent p-3">
-                    <p className="font-medium text-accent-foreground">📖 Чтение полезной книги</p>
-                    <p className="mt-1 text-xs">Перед сном 20 минут</p>
-                  </div>
-                </div>
               </div>
-            </Card>
+            </TabsContent>
 
-            <Card className="p-6 shadow-card">
-              <blockquote className="space-y-2 border-l-4 border-primary pl-4">
-                <p className="text-sm italic text-foreground">
-                  "Богатство не в количестве денег, а в довольстве сердца."
-                </p>
-                <footer className="text-xs text-muted-foreground">— Народная мудрость</footer>
-              </blockquote>
-            </Card>
-          </div>
+            <TabsContent value="goals" className="mt-6">
+              <Goals contributions={goalContributions} />
+            </TabsContent>
+
+            <TabsContent value="challenges" className="mt-6">
+              <Challenges />
+            </TabsContent>
+
+            <TabsContent value="analytics" className="mt-6">
+              <Analytics 
+                kpi={analytics.kpi}
+                subscriptions={analytics.subscriptions}
+                topMerchants={analytics.topMerchants}
+                categoryBreakdown={analytics.categoryBreakdown}
+                insights={analytics.insights}
+                transactions={activeCustomer.txns}
+                activeAnalyticsTab={activeAnalyticsTab}
+                onAnalyticsTabChange={setActiveAnalyticsTab}
+                onInsightAction={handleInsightAction}
+              />
+            </TabsContent>
+          </Tabs>
         </div>
       </main>
 

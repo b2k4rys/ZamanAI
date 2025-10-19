@@ -11,7 +11,10 @@ import { GoalAllocationDialog } from "./GoalAllocationDialog";
 import { AssistantMessage } from "./AssistantMessage";
 import { ReminderMessage } from "./ReminderMessage";
 import { TipMessage } from "./TipMessage";
+import { ProductRecommendationMessage } from "./ProductRecommendationMessage";
+import { ProductDetailDialog } from "./ProductDetailDialog";
 import { useCustomer } from "@/contexts/CustomerContext";
+import { PRODUCTS_MOCK, ProductMock } from "@/data/productsMock";
 import { buildSnapshot, parseAction, type ActionCommand } from "@/lib/customerSnapshot";
 import { callGemini } from "@/lib/geminiApi";
 import { toast } from "@/hooks/use-toast";
@@ -54,7 +57,14 @@ type TipMessage = {
   tip: Tip;
 };
 
-type Message = TextMessage | SalarySuggestionMessage | TipMessage;
+type ProductRecommendationMessage = {
+  id: string;
+  role: "assistant";
+  kind: "product-recommendation";
+  products: ProductMock[];
+};
+
+type Message = TextMessage | SalarySuggestionMessage | TipMessage | ProductRecommendationMessage;
 
 interface ChatAssistantProps {
   goals: Goal[];
@@ -130,6 +140,12 @@ export const ChatAssistant = ({
     percent: number;
     goalId?: string;
   }>({ open: false, amount: 0, percent: 10 });
+  
+  // Product dialog state
+  const [productDialog, setProductDialog] = useState<{
+    open: boolean;
+    product: ProductMock | null;
+  }>({ open: false, product: null });
 
   // Clear chat functionality
   const clearChat = () => {
@@ -214,7 +230,7 @@ export const ChatAssistant = ({
   const quickPrompts = [
     "Как накопить на квартиру? 🏡",
     "Посчитай расходы за месяц 📊",
-    "Подбери депозит 💰",
+    "Подобрать продукт 💼",
     "Планирование хаджа 🕌",
   ];
 
@@ -497,6 +513,73 @@ export const ChatAssistant = ({
     maybeShowSalaryInsight(250000);
   };
 
+  const handleRecommendProducts = () => {
+    // Add user message
+    const userMsg: TextMessage = {
+      id: `user-${Date.now()}`,
+      role: "user",
+      kind: "text",
+      content: "Подобрать продукт 💼",
+    };
+    setMessages(prev => [...prev, userMsg]);
+
+    // Show typing indicator
+    const typingMsg: TextMessage = {
+      id: 'typing',
+      role: 'assistant',
+      kind: 'text',
+      content: 'typing...',
+    };
+    setMessages(prev => [...prev, typingMsg]);
+
+    // Show products after delay
+    setTimeout(() => {
+      setMessages(prev => {
+        const withoutTyping = prev.filter(m => m.id !== 'typing');
+        const productsMsg: ProductRecommendationMessage = {
+          id: `products-${Date.now()}`,
+          role: "assistant",
+          kind: "product-recommendation",
+          products: PRODUCTS_MOCK,
+        };
+        return [...withoutTyping, productsMsg];
+      });
+    }, 800);
+  };
+
+  const handleProductAction = (action: string, product: ProductMock) => {
+    const [actionType, productId] = action.split(':');
+    
+    switch (actionType) {
+      case 'open_product':
+        setProductDialog({ open: true, product });
+        break;
+      
+      case 'open_calculator':
+        toast({
+          title: "Калькулятор",
+          description: "Функция в разработке",
+        });
+        break;
+      
+      case 'open_risk_disclaimer':
+        toast({
+          title: "⚠️ Предупреждение о рисках",
+          description: "Инвестиции связаны с риском. Рекомендуем консультацию со специалистом.",
+        });
+        break;
+    }
+
+    // Add confirmation message
+    const confirmMsg: TextMessage = {
+      id: `confirm-${Date.now()}`,
+      role: 'assistant',
+      kind: 'text',
+      content: `Окей, открыл ${actionType === 'open_product' ? 'условия' : 'информацию'} «${product.name}» ✨`,
+    };
+    setMessages(prev => [...prev, confirmMsg]);
+  };
+
   const handleSalaryMessageClick = (msg: SalarySuggestionMessage) => {
     setAllocationDialog({
       open: true,
@@ -683,6 +766,28 @@ export const ChatAssistant = ({
     if (!input.trim() || loading) return;
     
     const userMessage = input;
+    
+    // Check for product recommendation triggers
+    const productTriggers = [
+      '#recommend_products',
+      'какой продукт рекомендуешь',
+      'подбери продукт',
+      'подобрать продукт',
+      'рекомендуй продукт',
+      'куда вложить',
+      'подбери депозит',
+      'какой депозит',
+    ];
+    
+    const shouldShowProducts = productTriggers.some(trigger => 
+      userMessage.toLowerCase().includes(trigger.toLowerCase())
+    );
+    
+    if (shouldShowProducts) {
+      handleRecommendProducts();
+      return;
+    }
+    
     const newMsg: TextMessage = {
       id: `user-${Date.now()}`,
       role: "user",
@@ -871,13 +976,13 @@ ACTIVE_CUSTOMER_SNAPSHOT:${JSON.stringify(snapshot)}`;
             Советы от ассистента
           </Button>
           <Button
-            onClick={handleSimulateSalary}
+            onClick={handleRecommendProducts}
             size="sm"
             variant="outline"
             className="flex-1 gap-2 hover:bg-accent"
           >
             <Wallet className="h-4 w-4" />
-            Симулировать зарплату
+            💼 Рекомендуй продукт
           </Button>
         </div>
       </div>
@@ -922,6 +1027,28 @@ ACTIVE_CUSTOMER_SNAPSHOT:${JSON.stringify(snapshot)}`;
                     </Button>
                   </div>
                 </Card>
+              </div>
+            );
+          }
+
+          // Product recommendation message
+          if (message.kind === "product-recommendation") {
+            return (
+              <div key={message.id} className="flex justify-start fade-in">
+                <div className="max-w-[85%]">
+                  <Card className="p-4 bg-card border-l-4 border-primary/30">
+                    <div className="mb-3 flex items-center gap-2">
+                      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10">
+                        <Sparkles className="h-3 w-3 text-primary" />
+                      </div>
+                      <span className="text-xs font-semibold text-primary">Zaman AI</span>
+                    </div>
+                    <ProductRecommendationMessage 
+                      products={message.products} 
+                      onActionClick={handleProductAction} 
+                    />
+                  </Card>
+                </div>
               </div>
             );
           }
@@ -1062,6 +1189,12 @@ ACTIVE_CUSTOMER_SNAPSHOT:${JSON.stringify(snapshot)}`;
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      
+      <ProductDetailDialog
+        open={productDialog.open}
+        onOpenChange={(open) => setProductDialog({ ...productDialog, open })}
+        product={productDialog.product}
+      />
 
       {/* Resize handle */}
       {size.mode === 'docked' && (
