@@ -17,7 +17,7 @@ import { callGemini } from "@/lib/geminiApi";
 import { toast } from "@/hooks/use-toast";
 import { useSmartReminders } from "@/hooks/useSmartReminders";
 import { useSmartTips } from "@/hooks/useSmartTips";
-import { Tip } from "@/types/tip";
+import { Tip, TipType } from "@/types/tip";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -254,36 +254,146 @@ export const ChatAssistant = ({
   };
 
   const handleGetTips = () => {
-    const newTips = generateTips();
-    
-    // Always show tips (either data-driven or fallback)
-    const introMsg: TextMessage = {
-      id: `tips-intro-${Date.now()}`,
+    // Show typing indicator
+    const typingMsg: TextMessage = {
+      id: 'typing',
       role: 'assistant',
       kind: 'text',
-      content: newTips.length > 0 
-        ? `Проанализировал ваши данные. Вот что я заметил:` 
-        : `Вот несколько советов, которые могут помочь:`,
+      content: 'typing...',
     };
+    setMessages(prev => [...prev, typingMsg]);
     
-    // Show tips
-    const tipsToShow = newTips.slice(0, 3);
-    const tipMessages: TipMessage[] = tipsToShow.map(tip => ({
-      id: `tip-${tip.id}`,
-      role: 'assistant',
-      kind: 'tip',
-      tip,
-    }));
-    
-    setMessages(prev => [...prev, introMsg, ...tipMessages]);
-    
-    // Mark tips as shown
-    tipsToShow.forEach(tip => markShown(tip.id));
-    
-    toast({
-      title: "Советы готовы",
-      description: `Показано ${tipsToShow.length} совет(ов)`,
-    });
+    setTimeout(() => {
+      const newTips = generateTips();
+      
+      // Get rotation index from localStorage
+      const rotationKey = 'zaman.tips.rotation';
+      const currentIndex = parseInt(localStorage.getItem(rotationKey) || '0', 10);
+      
+      // Pick ONE tip (data-driven or fallback by rotation)
+      let selectedTip: Tip | null = null;
+      
+      if (newTips.length > 0) {
+        // Use first data-driven tip
+        selectedTip = newTips[0];
+      } else {
+        // Use fallback rotation
+        const fallbacks = [
+          {
+            id: 'fallback_1',
+            type: 'saving_opportunity' as TipType,
+            title: 'Регулярность важнее суммы 💡',
+            body: 'Даже **3 000 ₸** каждую неделю лучше, чем 50 000 раз в квартал. Отложим немного сегодня?',
+            ts: new Date().toISOString(),
+            actions: [],
+            priority: 5,
+          },
+          {
+            id: 'fallback_2',
+            type: 'challenge_checkin' as TipType,
+            title: '3 дня без доставки — круто! 🙌',
+            body: 'Продолжаем? Каждый день без импульсивных трат — шаг к мечте.',
+            ts: new Date().toISOString(),
+            actions: [],
+            priority: 5,
+          },
+          {
+            id: 'fallback_3',
+            type: 'low_balance' as TipType,
+            title: 'Распределим бюджет?',
+            body: 'На карте осталось **20 000 ₸**, впереди 5 дней — давай разложим по дням?',
+            ts: new Date().toISOString(),
+            actions: [],
+            priority: 5,
+          },
+          {
+            id: 'fallback_4',
+            type: 'goal_nudge' as TipType,
+            title: 'Начнём новую цель? 🎯',
+            body: 'Есть стабильный остаток **70 000 ₸**. Может, создадим цель на квартиру или хадж?',
+            ts: new Date().toISOString(),
+            actions: [],
+            priority: 5,
+          },
+          {
+            id: 'fallback_5',
+            type: 'bill_upcoming' as TipType,
+            title: 'Не забудьте про оплату!',
+            body: 'Хотите, я напомню оплатить интернет завтра, чтобы не забыть? 💚',
+            ts: new Date().toISOString(),
+            actions: [],
+            priority: 5,
+          },
+          {
+            id: 'fallback_6',
+            type: 'overspend' as TipType,
+            title: 'Траты на еду чуть выросли',
+            body: 'Создадим челлендж "Неделя домашней еды"? Это поможет сэкономить **10 000+ ₸**.',
+            ts: new Date().toISOString(),
+            actions: [],
+            priority: 5,
+          },
+          {
+            id: 'fallback_7',
+            type: 'goal_nudge' as TipType,
+            title: 'До цели "Хадж" осталось 1 200 000 ₸',
+            body: 'Добавим немного сегодня? Даже **5 000 ₸** — это прогресс. 🕌',
+            ts: new Date().toISOString(),
+            actions: [],
+            priority: 5,
+          },
+          {
+            id: 'fallback_8',
+            type: 'saving_opportunity' as TipType,
+            title: 'Порадуй себя добрым делом 🌿',
+            body: '**3 000 ₸** на благотворительность — это и баракат, и радость для души.',
+            ts: new Date().toISOString(),
+            actions: [],
+            priority: 5,
+          },
+          {
+            id: 'fallback_9',
+            type: 'saving_opportunity' as TipType,
+            title: 'Халяль-депозит под 15%',
+            body: 'Можем перевести **10%** свободных средств на депозит? Деньги будут работать на вас.',
+            ts: new Date().toISOString(),
+            actions: [],
+            priority: 5,
+          },
+          {
+            id: 'fallback_10',
+            type: 'challenge_checkin' as TipType,
+            title: 'Каждый день — шаг к мечте 💪',
+            body: 'Без импульсивных трат уже 2 дня. Продолжаем? Вы на верном пути!',
+            ts: new Date().toISOString(),
+            actions: [],
+            priority: 5,
+          },
+        ];
+        
+        selectedTip = fallbacks[currentIndex % fallbacks.length];
+        localStorage.setItem(rotationKey, String((currentIndex + 1) % fallbacks.length));
+      }
+      
+      // Remove typing indicator and add tip as TEXT message
+      setMessages(prev => {
+        const withoutTyping = prev.filter(m => m.id !== 'typing');
+        
+        if (selectedTip) {
+          const tipMsg: TextMessage = {
+            id: `tip-natural-${Date.now()}`,
+            role: 'assistant',
+            kind: 'text',
+            content: `**${selectedTip.title}**\n\n${selectedTip.body}`,
+          };
+          
+          markShown(selectedTip.id);
+          return [...withoutTyping, tipMsg];
+        }
+        
+        return withoutTyping;
+      });
+    }, 800); // Typing delay
   };
   
   const handleTipAction = (tip: Tip, action: Tip['actions'][0]) => {
