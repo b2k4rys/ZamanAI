@@ -16,8 +16,24 @@ export const customers: Customer[] = [
       { category: "Другое", amount: 30000 },
     ],
     goals: [
-      { title: "Авто", target: 5000000 },
-      { title: "Подушка безопасности", target: 1000000 },
+      { 
+        id: crypto.randomUUID(), 
+        name: "Авто", 
+        targetAmount: 5000000, 
+        savedAmount: 1200000,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        icon: "Car"
+      },
+      { 
+        id: crypto.randomUUID(), 
+        name: "Подушка безопасности", 
+        targetAmount: 1000000, 
+        savedAmount: 400000,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        icon: "Shield"
+      },
     ],
     language: "ru",
     txns: generateAidanaTxns(),
@@ -36,8 +52,24 @@ export const customers: Customer[] = [
       { category: "Другое", amount: 40000 },
     ],
     goals: [
-      { title: "Квартира", target: 30000000 },
-      { title: "Образование детей", target: 5000000 },
+      { 
+        id: crypto.randomUUID(), 
+        name: "Квартира", 
+        targetAmount: 30000000, 
+        savedAmount: 8500000,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        icon: "Home"
+      },
+      { 
+        id: crypto.randomUUID(), 
+        name: "Образование детей", 
+        targetAmount: 5000000, 
+        savedAmount: 2000000,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        icon: "GraduationCap"
+      },
     ],
     language: "ru",
     txns: generateErlanTxns(),
@@ -56,8 +88,24 @@ export const customers: Customer[] = [
       { category: "Другое", amount: 35000 },
     ],
     goals: [
-      { title: "Хадж", target: 2500000 },
-      { title: "Благотворительность", target: 1000000 },
+      { 
+        id: crypto.randomUUID(), 
+        name: "Хадж", 
+        targetAmount: 2500000, 
+        savedAmount: 1800000,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        icon: "Plane"
+      },
+      { 
+        id: crypto.randomUUID(), 
+        name: "Благотворительность", 
+        targetAmount: 1000000, 
+        savedAmount: 650000,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        icon: "Heart"
+      },
     ],
     language: "ru",
     txns: generateAliyaTxns(),
@@ -76,8 +124,24 @@ export const customers: Customer[] = [
       { category: "Другое", amount: 45000 },
     ],
     goals: [
-      { title: "Инвестиционный портфель", target: 10000000 },
-      { title: "Пассивный доход", target: 5000000 },
+      { 
+        id: crypto.randomUUID(), 
+        name: "Инвестиционный портфель", 
+        targetAmount: 10000000, 
+        savedAmount: 6200000,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        icon: "TrendingUp"
+      },
+      { 
+        id: crypto.randomUUID(), 
+        name: "Пассивный доход", 
+        targetAmount: 5000000, 
+        savedAmount: 2800000,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        icon: "Wallet"
+      },
     ],
     language: "ru",
     txns: generateDaniyarTxns(),

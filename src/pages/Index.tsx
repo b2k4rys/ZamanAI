@@ -10,7 +10,7 @@ import { ReflectionModal } from "@/components/ReflectionModal";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState, useMemo, useEffect } from "react";
-import { goals } from "@/data/mockGoals";
+import { getGoals } from "@/lib/goalsRepository";
 import { useCustomer } from "@/contexts/CustomerContext";
 import { buildKPI, detectSubscriptions, getTopMerchants, getCategoryBreakdown, generateInsights } from "@/lib/analytics";
 
@@ -94,6 +94,9 @@ const Index = () => {
     return { kpi, subscriptions, topMerchants, categoryBreakdown, insights };
   }, [activeCustomer]);
 
+  // Get goals from repository
+  const customerGoals = useMemo(() => getGoals(), [activeCustomer]);
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -125,7 +128,7 @@ const Index = () => {
               <TabsContent value="assistant" className="mt-6 space-y-8">
                 <div className="relative">
                   <ChatAssistant 
-                    goals={goals}
+                    goals={customerGoals}
                     challenges={[]} // TODO: Pass actual challenges from context
                     onContribute={handleContribute}
                     onCreateGoal={handleCreateGoal}

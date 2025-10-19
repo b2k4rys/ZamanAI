@@ -9,7 +9,7 @@ export function recommend(customer: Customer, products: Product[]): Recommendati
   const freeCash = Math.max(customer.monthlyIncome - total, 0);
   
   const hasGoal = (name: string) =>
-    (customer.goals || []).some((g) => g.title.toLowerCase().includes(name.toLowerCase()));
+    (customer.goals || []).some((g) => g.name.toLowerCase().includes(name.toLowerCase()));
 
   const list: Recommendation[] = [];
 

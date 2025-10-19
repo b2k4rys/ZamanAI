@@ -88,7 +88,7 @@ export const GoalAllocationDialog = ({
     const goal = goals.find((g) => g.id === selectedGoalId);
     toast({
       title: "Успешно!",
-      description: `Отложено ${new Intl.NumberFormat("ru-KZ").format(amount)} ₸ на «${goal?.title}»`,
+      description: `Отложено ${new Intl.NumberFormat("ru-KZ").format(amount)} ₸ на «${goal?.name}»`,
     });
 
     onOpenChange(false);
@@ -117,7 +117,7 @@ export const GoalAllocationDialog = ({
               <SelectContent>
                 {goals.map((goal) => (
                   <SelectItem key={goal.id} value={goal.id}>
-                    {goal.icon} {goal.title}
+                    {goal.icon} {goal.name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -160,19 +160,19 @@ export const GoalAllocationDialog = ({
             <div className="rounded-lg bg-accent/50 p-4">
               <div className="mb-2 flex items-center gap-2 text-sm font-medium text-accent-foreground">
                 <span className="text-lg">{selectedGoal.icon}</span>
-                {selectedGoal.title}
+                {selectedGoal.name}
               </div>
               <div className="space-y-1 text-xs text-muted-foreground">
                 <div className="flex justify-between">
                   <span>Текущая сумма:</span>
                   <span className="font-medium text-foreground">
-                    {new Intl.NumberFormat("ru-KZ").format(selectedGoal.currentAmount)} ₸
+                    {new Intl.NumberFormat("ru-KZ").format(Number(selectedGoal.savedAmount) || 0)} ₸
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span>После пополнения:</span>
                   <span className="font-semibold text-primary">
-                    {new Intl.NumberFormat("ru-KZ").format(selectedGoal.currentAmount + amount)} ₸
+                    {new Intl.NumberFormat("ru-KZ").format((Number(selectedGoal.savedAmount) || 0) + amount)} ₸
                   </span>
                 </div>
                 <div className="mt-2 flex justify-between border-t border-border pt-2">

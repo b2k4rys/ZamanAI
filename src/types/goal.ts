@@ -1,11 +1,11 @@
 export type Goal = {
   id: string;
-  title: string;
+  name: string;
   targetAmount: number;
-  currentAmount: number;
-  deadline: string;
-  monthlyPlan: number;
-  icon: string;
+  savedAmount: number;
+  createdAt: string;
+  updatedAt: string;
+  icon?: string;
   status?: 'active' | 'completed' | 'paused';
 };
 

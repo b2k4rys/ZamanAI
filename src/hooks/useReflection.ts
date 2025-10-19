@@ -19,9 +19,9 @@ type StoredTransaction = {
 
 type StoredGoal = {
   id: string;
-  title: string;
+  name: string;
   targetAmount: number;
-  currentAmount: number;
+  savedAmount: number;
 };
 
 type StoredCustomer = {
@@ -60,7 +60,42 @@ export function useReflection(selectedMonth?: string) {
       setTransactions([]);
       setGoals([]);
     }
+  }, [selectedMonth]);
+
+  // Re-listen to goals:updated events
+  useEffect(() => {
+    const handleGoalsUpdated = () => {
+      try {
+        const activeCustomerId = localStorage.getItem(ACTIVE_CUSTOMER_KEY);
+        const customersJson = localStorage.getItem(CUSTOMERS_STORAGE_KEY);
+        
+        if (customersJson && activeCustomerId) {
+          const customers: StoredCustomer[] = JSON.parse(customersJson);
+          const activeCustomer = customers.find(c => c.id === activeCustomerId);
+          
+          if (activeCustomer) {
+            setGoals(activeCustomer.goals || []);
+          }
+        }
+      } catch (e) {
+        console.error('Failed to reload goals', e);
+      }
+    };
+
+    window.addEventListener('goals:updated', handleGoalsUpdated);
+    return () => window.removeEventListener('goals:updated', handleGoalsUpdated);
   }, []);
+
+  // Re-listen to goals:updated events
+  useEffect(() => {
+    const handleGoalsUpdated = () => {
+      const data = calculateReflection(transactions, goals, lastMonth);
+      // Force recalculation on goal updates
+    };
+
+    window.addEventListener('goals:updated', handleGoalsUpdated);
+    return () => window.removeEventListener('goals:updated', handleGoalsUpdated);
+  }, [transactions, goals, lastMonth]);
 
   const reflectionData = useMemo(() => {
     return calculateReflection(transactions, goals, lastMonth);
@@ -176,19 +211,26 @@ function calculateMetrics(txns: StoredTransaction[], goals: StoredGoal[]): Refle
 
   // Calculate savings from transactions with 'savings' category and positive amount
   txns.forEach(t => {
-    if (t.category === 'Другое' && t.amount > 0) { // Assuming savings tracked as specific category
+    if (t.category === 'Другое' && t.amount > 0) {
       savingsSum += t.amount;
     }
   });
 
-  // Calculate goal progress
-  const goalProgress = goals.map(g => ({
-    goalId: g.id,
-    name: g.title,
-    delta: 0,
-    current: g.currentAmount,
-    target: g.targetAmount,
-  }));
+  // Calculate goal progress with protection from NaN
+  const goalProgress = goals.map(g => {
+    const target = Number(g.targetAmount) || 0;
+    const saved = Number(g.savedAmount) || 0;
+    const progressPct = target > 0 ? (saved / target) * 100 : 0;
+    
+    return {
+      goalId: g.id,
+      name: g.name,
+      delta: 0,
+      current: saved,
+      target: target,
+      progressPct: Math.min(100, Math.max(0, progressPct)),
+    };
+  });
 
   return {
     topUpCount: incomeCount,
@@ -246,8 +288,12 @@ function generateSlides(metrics: ReflectionMetrics, month: ReflectionMonth): Ref
   if (metrics.goalProgress.length > 0) {
     // Find goal with largest target amount or first one
     const topGoal = metrics.goalProgress.reduce((max, g) => 
-      g.target > max.target ? g : max
+      (g.target || 0) > (max.target || 0) ? g : max
     , metrics.goalProgress[0]);
+    
+    const target = Number(topGoal.target) || 0;
+    const current = Number(topGoal.current) || 0;
+    const progressPct = target > 0 ? Math.min(100, (current / target) * 100) : 0;
     
     slides.push({
       type: 'goals',
@@ -255,7 +301,7 @@ function generateSlides(metrics: ReflectionMetrics, month: ReflectionMonth): Ref
       emoji: '🎯',
       data: {
         goal: topGoal,
-        progress: (topGoal.current / topGoal.target) * 100,
+        progress: progressPct,
       },
     });
   }
@@ -308,7 +354,9 @@ function generateCaptions(metrics: ReflectionMetrics, month: ReflectionMonth): s
 
   if (metrics.goalProgress.length > 0) {
     const topGoal = metrics.goalProgress[0];
-    const progress = ((topGoal.current / topGoal.target) * 100).toFixed(1);
+    const target = Number(topGoal.target) || 0;
+    const current = Number(topGoal.current) || 0;
+    const progress = target > 0 ? ((current / target) * 100).toFixed(1) : '0.0';
     captions.push(`Ты на ${progress}% ближе к мечте «${topGoal.name}».`);
   }
 

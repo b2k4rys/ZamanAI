@@ -19,8 +19,13 @@ export interface ExpenseRow {
 }
 
 export interface CustomerGoal {
-  title: string;
-  target: number;
+  id: string;
+  name: string;
+  targetAmount: number;
+  savedAmount: number;
+  createdAt: string;
+  updatedAt: string;
+  icon?: string;
 }
 
 export interface Customer {

@@ -166,16 +166,16 @@ export function generateReminders(
 
   // 3. Goal nudge
   goals.forEach(goal => {
-    const progress = (goal.currentAmount / goal.targetAmount) * 100;
-    const monthlyTarget = goal.targetAmount / 12; // rough estimate
+    const progress = ((Number(goal.savedAmount) || 0) / (Number(goal.targetAmount) || 1)) * 100;
+    const monthlyTarget = (Number(goal.targetAmount) || 0) / 12;
     
-    if (progress < 50 && goal.currentAmount < monthlyTarget * 0.5) {
+    if (progress < 50 && (Number(goal.savedAmount) || 0) < monthlyTarget * 0.5) {
       const suggested = Math.round(monthlyTarget * 0.1);
       reminders.push({
         id: `goal_${goal.id}_${new Date().toISOString().split('T')[0]}`,
         type: 'goal_nudge',
-        title: `Подкинуть на цель "${goal.title}"?`,
-        body: `До цели **«${goal.title}»** не хватило отложить в этом месяце. Переведу ${suggested.toLocaleString()} ₸?`,
+        title: `Подкинуть на цель "${goal.name}"?`,
+        body: `До цели **«${goal.name}»** не хватило отложить в этом месяце. Переведу ${suggested.toLocaleString()} ₸?`,
         ts: now,
         actions: [
           { label: 'Перевести', action: { kind: 'transfer_to_goal', goalId: goal.id, amount: suggested } },

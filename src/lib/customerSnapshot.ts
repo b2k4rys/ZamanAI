@@ -32,10 +32,10 @@ export function buildSnapshot(customer: Customer, goals: Goal[]): CustomerSnapsh
     })),
     goals: goals.map(g => ({
       id: g.id,
-      title: g.title,
+      title: g.name,
       target: g.targetAmount,
-      current: g.currentAmount,
-      deadline: g.deadline,
+      current: g.savedAmount,
+      deadline: undefined,
     })),
     subscriptions: subscriptions.map(s => ({
       merchant: s.merchant,

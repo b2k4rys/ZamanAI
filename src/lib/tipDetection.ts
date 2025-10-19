@@ -44,7 +44,7 @@ export function calculateFreeCash(txns: Transaction[], goals: Goal[]): number {
   const upcomingBills = bills.reduce((sum, b) => sum + b.amount, 0);
   const goalTargets = goals
     .filter(g => !g.status || g.status === 'active')
-    .reduce((sum, g) => sum + (g.targetAmount - g.currentAmount) * 0.1, 0); // 10% monthly
+    .reduce((sum, g) => sum + ((Number(g.targetAmount) || 0) - (Number(g.savedAmount) || 0)) * 0.1, 0);
   
   return balance - upcomingBills - goalTargets;
 }
@@ -169,17 +169,17 @@ export function generateSmartTips(
   // 5. Goal nudge
   goals.forEach(goal => {
     if (goal.status && goal.status !== 'active') return;
-    const progress = (goal.currentAmount / goal.targetAmount) * 100;
-    const monthlyTarget = goal.targetAmount / 12;
-    const missing = monthlyTarget * 0.5 - goal.currentAmount;
+    const progress = ((Number(goal.savedAmount) || 0) / (Number(goal.targetAmount) || 1)) * 100;
+    const monthlyTarget = (Number(goal.targetAmount) || 0) / 12;
+    const missing = monthlyTarget * 0.5 - (Number(goal.savedAmount) || 0);
     
     if (progress < 50 && missing > 0) {
       const suggested = Math.round(missing);
       tips.push({
         id: `tip_goal_${goal.id}_${new Date().toISOString().split('T')[0]}`,
         type: 'goal_nudge',
-        title: `До цели "${goal.title}" не хватает`,
-        body: `До цели **«${goal.title}»** в этом месяце не доложили **${suggested.toLocaleString()} ₸**. Пополнить сейчас?`,
+        title: `До цели "${goal.name}" не хватает`,
+        body: `До цели **«${goal.name}»** в этом месяце не доложили **${suggested.toLocaleString()} ₸**. Пополнить сейчас?`,
         ts: now,
         actions: [
           { label: 'Пополнить цель', action: { kind: 'transfer_to_goal', goalId: goal.id, amount: suggested } },

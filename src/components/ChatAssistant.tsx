@@ -338,10 +338,10 @@ export const ChatAssistant = ({
           addTransaction({
             date: new Date().toISOString(),
             amount: -tipAction.amount,
-            rawMerchant: `Накопление: ${goal.title}`,
+            rawMerchant: `Накопление: ${goal.name}`,
             note: 'Перевод по совету',
           });
-          confirmContent = `Перевёл ${tipAction.amount.toLocaleString()} ₸ на вашу цель «${goal.title}».`;
+          confirmContent = `Перевёл ${tipAction.amount.toLocaleString()} ₸ на вашу цель «${goal.name}».`;
           toast({
             title: "Цель пополнена",
             description: `${tipAction.amount.toLocaleString()} ₸`,
@@ -404,7 +404,7 @@ export const ChatAssistant = ({
       id: `confirm-${Date.now()}`,
       role: "assistant",
       kind: "text",
-      content: `Отложил ${new Intl.NumberFormat("ru-KZ").format(amount)} ₸ на «${goal.title}». Баркат растёт! 🌿`,
+      content: `Отложил ${new Intl.NumberFormat("ru-KZ").format(amount)} ₸ на «${goal.name}». Баркат растёт! 🌿`,
     };
     setMessages((prev) => [...prev, confirmMsg]);
     setAllocationDialog({ open: false, amount: 0, percent: 10 });
@@ -421,7 +421,7 @@ export const ChatAssistant = ({
           addTransaction({
             date: new Date().toISOString(),
             amount: -action.amount,
-            rawMerchant: `Накопление: ${goal.title}`,
+            rawMerchant: `Накопление: ${goal.name}`,
             note: `Автосейв ${action.source || 'manual'}`,
           });
 
@@ -429,7 +429,7 @@ export const ChatAssistant = ({
             id: `action-confirm-${Date.now()}`,
             role: "assistant",
             kind: "text",
-            content: `✅ Отложено ${formatAmount(action.amount)} ₸ на «${goal.title}»`,
+            content: `✅ Отложено ${formatAmount(action.amount)} ₸ на «${goal.name}»`,
           };
           setMessages((prev) => [...prev, confirmMsg]);
         }
@@ -527,14 +527,14 @@ export const ChatAssistant = ({
           addTransaction({
             date: new Date().toISOString(),
             amount: -action.amount,
-            rawMerchant: `Накопление: ${goal.title}`,
+            rawMerchant: `Накопление: ${goal.name}`,
             note: 'Перевод по напоминанию',
           });
           const confirmMsg: TextMessage = {
             id: `action-confirm-${Date.now()}`,
             role: "assistant",
             kind: "text",
-            content: `✅ Переведено ${formatAmount(action.amount)} ₸ на цель «${goal.title}»`,
+            content: `✅ Переведено ${formatAmount(action.amount)} ₸ на цель «${goal.name}»`,
           };
           setMessages((prev) => [...prev, confirmMsg]);
         }
