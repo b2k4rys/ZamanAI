@@ -5,6 +5,8 @@ import { Analytics } from "@/pages/Analytics";
 import { Challenges } from "@/pages/Challenges";
 import { ProductRecommendations } from "@/components/ProductRecommendations";
 import { CustomerSelector } from "@/components/CustomerSelector";
+import { ReflectionCard } from "@/components/ReflectionCard";
+import { ReflectionModal } from "@/components/ReflectionModal";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState, useMemo, useEffect } from "react";
@@ -18,6 +20,7 @@ const Index = () => {
     return localStorage.getItem("zaman.activeTab") || "assistant";
   });
   const [activeAnalyticsTab, setActiveAnalyticsTab] = useState("expenses");
+  const [reflectionOpen, setReflectionOpen] = useState(false);
   const { activeCustomer } = useCustomer();
 
   // Save active tab to localStorage
@@ -150,6 +153,7 @@ const Index = () => {
                   categoryBreakdown={analytics.categoryBreakdown}
                   insights={analytics.insights}
                   transactions={activeCustomer.txns}
+                  goals={goals}
                   activeAnalyticsTab={activeAnalyticsTab}
                   onAnalyticsTabChange={setActiveAnalyticsTab}
                   onInsightAction={handleInsightAction}
@@ -160,6 +164,8 @@ const Index = () => {
 
           {/* Right Column - Sidebar */}
           <div className="space-y-6" id="product-recommendations">
+            <ReflectionCard onOpen={() => setReflectionOpen(true)} />
+            
             <ProductRecommendations />
 
             <Card className="p-6 shadow-card">
@@ -199,6 +205,15 @@ const Index = () => {
           </div>
         </div>
       </main>
+
+      {/* Reflection Modal */}
+      <ReflectionModal
+        open={reflectionOpen}
+        onOpenChange={setReflectionOpen}
+        transactions={activeCustomer.txns}
+        goals={goals}
+        onAction={handleInsightAction}
+      />
     </div>
   );
 };
