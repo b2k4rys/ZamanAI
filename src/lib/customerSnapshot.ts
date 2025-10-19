@@ -52,7 +52,10 @@ export type ActionCommand =
   | { type: 'create_goal'; title: string; target: number; deadline?: string }
   | { type: 'show_product_recs' }
   | { type: 'show_goals' }
-  | { type: 'set_limit'; merchant: string; monthly: number };
+  | { type: 'set_limit'; merchant: string; monthly: number }
+  | { type: 'create_challenge'; scope: any; durationDays: 7 | 14 | 30; target: any; hacks: any[] }
+  | { type: 'open_challenges' }
+  | { type: 'checkin'; challengeId: string };
 
 export function parseAction(text: string): ActionCommand | null {
   const actionMarker = '@@ACTION';

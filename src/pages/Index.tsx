@@ -2,6 +2,7 @@ import { Navbar } from "@/components/Navbar";
 import { ChatAssistant } from "@/components/ChatAssistant";
 import { Goals } from "@/pages/Goals";
 import { Analytics } from "@/pages/Analytics";
+import { Challenges } from "@/pages/Challenges";
 import { ProductRecommendations } from "@/components/ProductRecommendations";
 import { CustomerSelector } from "@/components/CustomerSelector";
 import { Card } from "@/components/ui/card";
@@ -50,6 +51,10 @@ const Index = () => {
     setActiveMainTab("goals");
   };
 
+  const handleShowChallenges = () => {
+    setActiveMainTab("challenges");
+  };
+
   const handleShowProductRecs = () => {
     // Scroll to product recommendations
     const element = document.getElementById("product-recommendations");
@@ -80,12 +85,15 @@ const Index = () => {
 
             {/* Main Navigation Tabs */}
             <Tabs value={activeMainTab} onValueChange={setActiveMainTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-3 h-12">
+              <TabsList className="grid w-full grid-cols-4 h-12">
                 <TabsTrigger value="assistant" className="gap-2 text-base">
                   💬 Ассистент
                 </TabsTrigger>
                 <TabsTrigger value="goals" className="gap-2 text-base">
                   🎯 Мои цели
+                </TabsTrigger>
+                <TabsTrigger value="challenges" className="gap-2 text-base">
+                  ⚡ Челленджи
                 </TabsTrigger>
                 <TabsTrigger value="analytics" className="gap-2 text-base">
                   📊 Аналитика
@@ -101,12 +109,17 @@ const Index = () => {
                     onShowExpenseBreakdown={handleShowExpenseBreakdown}
                     onShowProductRecs={handleShowProductRecs}
                     onShowGoals={handleShowGoals}
+                    onShowChallenges={handleShowChallenges}
                   />
                 </div>
               </TabsContent>
 
               <TabsContent value="goals" className="mt-6">
                 <Goals contributions={goalContributions} />
+              </TabsContent>
+
+              <TabsContent value="challenges" className="mt-6">
+                <Challenges />
               </TabsContent>
 
               <TabsContent value="analytics" className="mt-6">
