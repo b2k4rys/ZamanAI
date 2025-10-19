@@ -51,6 +51,7 @@ export type ActionCommand =
   | { type: 'allocate_to_goal'; goalId: string; amount: number; source?: 'salary_insight' | 'manual' }
   | { type: 'create_goal'; title: string; target: number; deadline?: string }
   | { type: 'show_product_recs' }
+  | { type: 'show_goals' }
   | { type: 'set_limit'; merchant: string; monthly: number };
 
 export function parseAction(text: string): ActionCommand | null {

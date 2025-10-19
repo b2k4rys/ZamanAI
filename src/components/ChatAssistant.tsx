@@ -48,14 +48,16 @@ interface ChatAssistantProps {
   onCreateGoal?: (title: string, target: number, deadline?: string) => void;
   onShowExpenseBreakdown?: (category?: string, merchant?: string) => void;
   onShowProductRecs?: () => void;
+  onShowGoals?: () => void;
 }
 
 export const ChatAssistant = ({ 
   goals, 
   onContribute, 
-  onCreateGoal,
+  onCreateGoal, 
   onShowExpenseBreakdown,
-  onShowProductRecs 
+  onShowProductRecs,
+  onShowGoals
 }: ChatAssistantProps) => {
   const { activeCustomer, addTransaction } = useCustomer();
   
@@ -291,6 +293,16 @@ export const ChatAssistant = ({
         toast({
           title: "Открываю рекомендации",
           description: "Продукты подобраны под ваш профиль",
+        });
+        break;
+      }
+      case 'show_goals': {
+        if (onShowGoals) {
+          onShowGoals();
+        }
+        toast({
+          title: "Открываю цели",
+          description: "Ваши финансовые цели и прогресс",
         });
         break;
       }

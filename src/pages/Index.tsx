@@ -1,24 +1,28 @@
 import { Navbar } from "@/components/Navbar";
 import { ChatAssistant } from "@/components/ChatAssistant";
-import { GoalCard } from "@/components/GoalCard";
-import { ExpenseAnalytics } from "@/components/ExpenseAnalytics";
-import { MerchantBreakdown } from "@/components/MerchantBreakdown";
-import { SubscriptionsList } from "@/components/SubscriptionsList";
-import { InsightsFeed } from "@/components/InsightsFeed";
+import { Goals } from "@/pages/Goals";
+import { Analytics } from "@/pages/Analytics";
 import { ProductRecommendations } from "@/components/ProductRecommendations";
 import { CustomerSelector } from "@/components/CustomerSelector";
-import { TransactionManager } from "@/components/TransactionManager";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { goals } from "@/data/mockGoals";
 import { useCustomer } from "@/contexts/CustomerContext";
 import { buildKPI, detectSubscriptions, getTopMerchants, getCategoryBreakdown, generateInsights } from "@/lib/analytics";
 
 const Index = () => {
   const [goalContributions, setGoalContributions] = useState<Record<string, number>>({});
-  const [activeTab, setActiveTab] = useState("expenses");
+  const [activeMainTab, setActiveMainTab] = useState(() => {
+    return localStorage.getItem("zaman.activeTab") || "assistant";
+  });
+  const [activeAnalyticsTab, setActiveAnalyticsTab] = useState("expenses");
   const { activeCustomer } = useCustomer();
+
+  // Save active tab to localStorage
+  useEffect(() => {
+    localStorage.setItem("zaman.activeTab", activeMainTab);
+  }, [activeMainTab]);
 
   const handleContribute = (goalId: string, amount: number, date: string) => {
     setGoalContributions(prev => ({
@@ -33,12 +37,17 @@ const Index = () => {
   };
 
   const handleShowExpenseBreakdown = (category?: string, merchant?: string) => {
-    // Switch to appropriate tab
+    // Switch to analytics tab, then to appropriate sub-tab
+    setActiveMainTab("analytics");
     if (merchant) {
-      setActiveTab("merchants");
+      setActiveAnalyticsTab("merchants");
     } else if (category) {
-      setActiveTab("expenses");
+      setActiveAnalyticsTab("expenses");
     }
+  };
+
+  const handleShowGoals = () => {
+    setActiveMainTab("goals");
   };
 
   const handleShowProductRecs = () => {
@@ -69,50 +78,47 @@ const Index = () => {
             {/* Customer Selector */}
             <CustomerSelector />
 
-            <div className="relative">
-              <ChatAssistant 
-                goals={goals} 
-                onContribute={handleContribute}
-                onCreateGoal={handleCreateGoal}
-                onShowExpenseBreakdown={handleShowExpenseBreakdown}
-                onShowProductRecs={handleShowProductRecs}
-              />
-            </div>
-
-            <GoalCard contributions={goalContributions} />
-            
-            {/* Analytics Tabs */}
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="expenses">Расходы</TabsTrigger>
-                <TabsTrigger value="merchants">Мерчанты</TabsTrigger>
-                <TabsTrigger value="subscriptions">Подписки</TabsTrigger>
-                <TabsTrigger value="transactions">Транзакции</TabsTrigger>
+            {/* Main Navigation Tabs */}
+            <Tabs value={activeMainTab} onValueChange={setActiveMainTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-3 h-12">
+                <TabsTrigger value="assistant" className="gap-2 text-base">
+                  💬 Ассистент
+                </TabsTrigger>
+                <TabsTrigger value="goals" className="gap-2 text-base">
+                  🎯 Мои цели
+                </TabsTrigger>
+                <TabsTrigger value="analytics" className="gap-2 text-base">
+                  📊 Аналитика
+                </TabsTrigger>
               </TabsList>
-              
-              <TabsContent value="expenses" className="mt-6">
-                <div className="space-y-6">
-                  <ExpenseAnalytics 
-                    categories={analytics.categoryBreakdown} 
-                    totalSpend={analytics.kpi.totalSpend} 
+
+              <TabsContent value="assistant" className="mt-6 space-y-8">
+                <div className="relative">
+                  <ChatAssistant 
+                    goals={goals} 
+                    onContribute={handleContribute}
+                    onCreateGoal={handleCreateGoal}
+                    onShowExpenseBreakdown={handleShowExpenseBreakdown}
+                    onShowProductRecs={handleShowProductRecs}
+                    onShowGoals={handleShowGoals}
                   />
-                  <InsightsFeed insights={analytics.insights} />
                 </div>
               </TabsContent>
-              
-              <TabsContent value="merchants" className="mt-6">
-                <MerchantBreakdown 
-                  merchants={analytics.topMerchants}
-                  subscriptions={analytics.subscriptions.map(s => s.merchant)}
+
+              <TabsContent value="goals" className="mt-6">
+                <Goals contributions={goalContributions} />
+              </TabsContent>
+
+              <TabsContent value="analytics" className="mt-6">
+                <Analytics 
+                  kpi={analytics.kpi}
+                  subscriptions={analytics.subscriptions}
+                  topMerchants={analytics.topMerchants}
+                  categoryBreakdown={analytics.categoryBreakdown}
+                  insights={analytics.insights}
+                  activeAnalyticsTab={activeAnalyticsTab}
+                  onAnalyticsTabChange={setActiveAnalyticsTab}
                 />
-              </TabsContent>
-              
-              <TabsContent value="subscriptions" className="mt-6">
-                <SubscriptionsList subscriptions={analytics.subscriptions} />
-              </TabsContent>
-              
-              <TabsContent value="transactions" className="mt-6">
-                <TransactionManager />
               </TabsContent>
             </Tabs>
           </div>
