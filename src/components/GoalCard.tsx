@@ -103,122 +103,106 @@ export const GoalCard = ({ contributions = {} }: GoalCardProps) => {
             return (
               <Card 
                 key={goal.id} 
-                className="group relative overflow-hidden transition-all hover:shadow-lg cursor-pointer"
+                className="relative overflow-hidden rounded-2xl bg-white border border-[#E8EFEA] hover:shadow-lg transition-shadow cursor-pointer"
+                style={{ boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}
                 onClick={() => handleGoalClick(goal.id)}
               >
-                {/* Gradient Cover */}
-                <div 
-                  className="absolute inset-0 h-24 opacity-10"
-                  style={{
-                    background: 'linear-gradient(135deg, #2D9A86 0%, #EEFE6D 100%)',
-                  }}
-                />
-
-                <div className="relative p-5 space-y-4">
+                <div className="p-5 space-y-4">
                   {/* Header */}
                   <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-2 min-w-0 flex-1">
-                      <span className="text-2xl flex-shrink-0">{getTypeEmoji(goal.type)}</span>
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="w-12 h-12 rounded-full bg-[#E9F6F2] flex items-center justify-center flex-shrink-0">
+                        <span className="text-2xl">{getTypeEmoji(goal.type)}</span>
+                      </div>
                       <div className="min-w-0 flex-1">
-                        <h3 className="font-semibold text-base leading-tight text-foreground line-clamp-2 break-words">
+                        <h3 className="font-semibold text-[16px] leading-tight text-[#1C2A27]">
                           {goal.name}
                         </h3>
                         {goal.type && (
-                          <p className="text-xs text-muted-foreground mt-0.5">{goal.type}</p>
+                          <p className="text-[13px] text-[#6A7C76] mt-0.5">{goal.type}</p>
                         )}
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <GoalProgressDonut goal={goal} size={60} />
-                      
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-accent">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={(e) => e.stopPropagation()}>
-                            <Edit className="mr-2 h-4 w-4" />
-                            Изменить
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={(e) => e.stopPropagation()}>
-                            <Pause className="mr-2 h-4 w-4" />
-                            Пауза
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (confirm("Удалить цель?")) {
-                                // deleteGoal(goal.id);
-                              }
-                            }}
-                            className="text-destructive"
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Удалить
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-[#E9F6F2]">
+                          <MoreVertical className="h-4 w-4 text-[#2D9A86]" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={(e) => e.stopPropagation()}>
+                          <Edit className="mr-2 h-4 w-4" />
+                          Изменить
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={(e) => e.stopPropagation()}>
+                          <Pause className="mr-2 h-4 w-4" />
+                          Пауза
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (confirm("Удалить цель?")) {
+                              // deleteGoal(goal.id);
+                            }
+                          }}
+                          className="text-destructive"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Удалить
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
 
                   {/* Progress */}
                   <div className="space-y-2">
-                    <div className="flex items-baseline justify-between gap-2 text-sm">
-                      <span className="text-muted-foreground">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <span className="text-[14px] text-[#6A7C76]">
                         {formatAmount(savedAmount)} / {formatAmount(targetAmount)} ₸
                       </span>
-                      <span className="font-semibold text-foreground">{progress.toFixed(0)}%</span>
+                      <Badge className="bg-[#EEFE6D] text-[#2D9A86] border-[#2D9A86]/20 font-semibold hover:bg-[#EEFE6D]">
+                        {progress.toFixed(0)}%
+                      </Badge>
                     </div>
-                    <div className="h-2 w-full rounded-full bg-accent/50 overflow-hidden">
+                    <div className="h-3 w-full rounded-full bg-[#E9F6F2] overflow-hidden">
                       <div 
-                        className="h-full rounded-full bg-primary transition-all duration-500"
+                        className="h-full rounded-full bg-[#EEFE6D] transition-all duration-500"
                         style={{ width: `${Math.min(100, progress)}%` }}
                       />
                     </div>
+                    <p className="text-[13px] text-[#6A7C76]">
+                      Осталось накопить: <span className="font-semibold text-[#1C2A27]">{formatAmount(remaining)} ₸</span>
+                    </p>
                   </div>
 
                   {/* KPIs */}
-                  <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="grid grid-cols-2 gap-3 pt-2 border-t border-[#E8EFEA]">
                     <div className="space-y-1">
-                      <p className="text-muted-foreground">Ежемесячно</p>
-                      <p className="font-semibold text-foreground">{formatAmount(goal.monthlyPlan || 0)} ₸</p>
+                      <p className="text-[13px] text-[#6A7C76]">Ежемесячно</p>
+                      <p className="font-semibold text-[15px] text-[#1C2A27]">{formatAmount(goal.monthlyPlan || 0)} ₸</p>
                     </div>
                     <div className="space-y-1">
-                      <p className="text-muted-foreground">Осталось</p>
-                      <p className="font-semibold text-foreground">
-                        {goal.monthsLeft || 0} {goal.monthsLeft === 1 ? 'мес' : 'мес'}
+                      <p className="text-[13px] text-[#6A7C76]">Осталось</p>
+                      <p className="font-semibold text-[15px] text-[#1C2A27]">
+                        {goal.monthsLeft || 0} мес
                       </p>
                     </div>
                   </div>
 
-                  {/* Status Badge */}
-                  {goal.deadline && (
-                    <div className="flex items-center justify-between pt-2 border-t border-border/50">
-                      <span className="text-xs text-muted-foreground">
-                        {format(parseISO(goal.deadline), 'd MMMM yyyy', { locale: ru })}
-                      </span>
-                      <Badge className={`text-xs ${riskBadge.color}`}>
-                        {riskBadge.text}
-                      </Badge>
-                    </div>
-                  )}
-
                   {/* Autosave Badges */}
                   {(goal.autosave?.roundups?.enabled || goal.autosave?.smartSave?.enabled || goal.autosave?.setAndForget?.enabled) && (
-                    <div className="flex flex-wrap gap-1.5 pt-1">
+                    <div className="flex flex-wrap gap-1.5">
                       {goal.autosave.roundups?.enabled && (
-                        <Badge variant="secondary" className="text-xs">🔄 Округление</Badge>
+                        <Badge variant="secondary" className="text-[11px] py-0.5 px-2">🔄 Округление</Badge>
                       )}
                       {goal.autosave.smartSave?.enabled && (
-                        <Badge className="text-xs bg-[#EEFE6D] text-[#2D9A86] border-[#2D9A86]/20">
+                        <Badge className="text-[11px] py-0.5 px-2 bg-[#EEFE6D] text-[#2D9A86] border-[#2D9A86]/20 hover:bg-[#EEFE6D]">
                           💡 Smart Save
                         </Badge>
                       )}
                       {goal.autosave.setAndForget?.enabled && (
-                        <Badge variant="secondary" className="text-xs">⏰ Авто</Badge>
+                        <Badge variant="secondary" className="text-[11px] py-0.5 px-2">⏰ Авто</Badge>
                       )}
                     </div>
                   )}
