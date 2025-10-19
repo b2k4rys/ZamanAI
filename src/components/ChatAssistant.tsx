@@ -1145,7 +1145,18 @@ ACTIVE_CUSTOMER_SNAPSHOT:${JSON.stringify(snapshot)}`;
             size="icon"
             variant="outline"
             className="hover:bg-accent border-primary/20"
-            title="Голосовой ввод (скоро)"
+            title="Голосовой ввод"
+            onClick={() => {
+              const voiceCommand = "Сделай анализ по моим расходам";
+              setInput(voiceCommand);
+              // Trigger send after a short delay to ensure state is updated
+              setTimeout(() => {
+                if (!loading) {
+                  handleSend();
+                }
+              }, 100);
+            }}
+            disabled={loading}
           >
             <Mic className="h-4 w-4" />
           </Button>
