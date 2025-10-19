@@ -34,8 +34,8 @@ export function WeekStreakRow({ weekView, onDayClick }: WeekStreakRowProps) {
   };
 
   return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between gap-1">
+    <div className="overflow-x-auto scrollbar-hide" style={{ scrollSnapType: 'x mandatory' }}>
+      <div className="flex items-center gap-1.5 min-w-max">
         <TooltipProvider>
           {weekView.days.map((day, idx) => (
             <Tooltip key={idx}>
@@ -43,23 +43,28 @@ export function WeekStreakRow({ weekView, onDayClick }: WeekStreakRowProps) {
                 <button
                   onClick={() => onDayClick?.(idx)}
                   disabled={day.state === 'rest'}
+                  style={{ scrollSnapAlign: 'start' }}
                   className={cn(
-                    "flex flex-col items-center justify-center rounded-full w-10 h-10 transition-all",
-                    getStateColor(day.state),
-                    day.state !== 'rest' && "hover:scale-110 cursor-pointer",
+                    "flex flex-col items-center justify-center rounded-lg w-6 h-6 transition-all border flex-shrink-0",
+                    day.state === 'done' && "bg-[#E9F6F2] border-[#2D9A86] text-[#2D9A86]",
+                    day.state === 'missed' && "bg-muted border-border text-muted-foreground",
+                    day.state === 'today' && "bg-background border-2 border-primary text-foreground",
+                    day.state === 'rest' && "bg-transparent border-[#E8EFEA] text-muted-foreground/50",
+                    day.state !== 'rest' && "hover:scale-105 cursor-pointer",
                     day.state === 'rest' && "cursor-not-allowed"
                   )}
                 >
-                  <span className="text-[10px] font-medium mb-0.5">
+                  <span className="text-[10px] font-medium">
                     {getWeekDayLabel(day.w)}
                   </span>
-                  {getStateIcon(day.state)}
+                  {day.state === 'done' && <Check className="h-2.5 w-2.5 absolute" />}
+                  {day.state === 'missed' && <X className="h-2.5 w-2.5 absolute" />}
                 </button>
               </TooltipTrigger>
               <TooltipContent>
                 <div className="text-sm">
                   {day.state === 'done' && (
-                    <p>Сэкономлено {day.saved?.toLocaleString() ?? 0} ₸</p>
+                    <p>Сэкономлено {new Intl.NumberFormat('ru-KZ').format(day.saved ?? 0)} ₸</p>
                   )}
                   {day.state === 'missed' && <p>Пропущено</p>}
                   {day.state === 'today' && <p>Сегодня</p>}

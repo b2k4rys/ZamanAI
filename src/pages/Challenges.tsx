@@ -44,14 +44,14 @@ export const Challenges = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="w-full max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+      <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground flex items-center gap-2">
+          <h1 className="text-3xl font-bold text-foreground flex items-center gap-2" style={{ lineHeight: '1.2' }}>
             <Zap className="h-8 w-8 text-primary" />
             Челленджи
           </h1>
-          <p className="text-muted-foreground mt-2">
+          <p className="text-muted-foreground mt-2" style={{ lineHeight: '1.3' }}>
             Создавайте вызовы себе и экономьте деньги на важные цели
           </p>
         </div>
@@ -92,7 +92,7 @@ export const Challenges = () => {
           </div>
         </Card>
       ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
           {challenges.map(challenge => (
             <ChallengeCard
               key={challenge.id}
@@ -107,27 +107,27 @@ export const Challenges = () => {
 
       {/* Stats Summary */}
       {challenges.length > 0 && (
-        <div className="grid gap-4 md:grid-cols-3">
-          <Card className="p-6">
-            <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">Активных челленджей</p>
-              <p className="text-3xl font-bold text-primary">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <Card className="p-6 flex items-center justify-center">
+            <div className="space-y-2 text-center">
+              <p className="text-sm text-muted-foreground" style={{ lineHeight: '1.3' }}>Активных челленджей</p>
+              <p className="text-2xl sm:text-3xl font-bold text-primary" style={{ lineHeight: '1.2' }}>
                 {challenges.filter(c => c.status === 'active').length}
               </p>
             </div>
           </Card>
-          <Card className="p-6">
-            <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">Всего сэкономлено</p>
-              <p className="text-3xl font-bold text-foreground">
-                {challenges.reduce((sum, c) => sum + c.saved, 0).toLocaleString()} ₸
+          <Card className="p-6 flex items-center justify-center">
+            <div className="space-y-2 text-center">
+              <p className="text-sm text-muted-foreground" style={{ lineHeight: '1.3' }}>Всего сэкономлено</p>
+              <p className="text-2xl sm:text-3xl font-bold text-foreground" style={{ lineHeight: '1.2' }}>
+                {new Intl.NumberFormat('ru-KZ').format(challenges.reduce((sum, c) => sum + c.saved, 0))} ₸
               </p>
             </div>
           </Card>
-          <Card className="p-6">
-            <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">Завершено</p>
-              <p className="text-3xl font-bold text-green-600">
+          <Card className="p-6 flex items-center justify-center">
+            <div className="space-y-2 text-center">
+              <p className="text-sm text-muted-foreground" style={{ lineHeight: '1.3' }}>Завершено</p>
+              <p className="text-2xl sm:text-3xl font-bold text-green-600" style={{ lineHeight: '1.2' }}>
                 {challenges.filter(c => c.status === 'completed').length}
               </p>
             </div>
