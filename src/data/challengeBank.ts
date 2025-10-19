@@ -5,13 +5,14 @@ export const CHALLENGE_BANK_KEY = "zaman.challengeBank.v1";
 export const DEFAULT_CHALLENGE_BANK: ChallengeTemplate[] = [
   {
     id: "tpl.taxi.month.40k",
-    title: "Такси ≤ 40 000 ₸ в месяц",
-    place: "Yandex Go",
+    title: "Такси ≤ 40 000 ₸ в месяц 🚕",
+    place: "Транспорт",
     period: "month",
     targetAmount: 15000,
     defaultSaved: 0,
     icon: "🚕",
-    scope: { kind: 'merchant', value: 'Yandex Go' },
+    note: "Следи за расходами на поездки — попробуй пройти пешком пару раз в неделю 🌿",
+    scope: { kind: 'category', value: 'Транспорт' },
   },
   {
     id: "tpl.food.week.noDelivery",
