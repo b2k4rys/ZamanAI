@@ -61,13 +61,32 @@ const Index = () => {
     element?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
+  const handleInsightAction = (action: string, insight: any) => {
+    switch (action) {
+      case 'Создать челлендж':
+        setActiveMainTab('challenges');
+        break;
+      case 'Перевести в цель':
+        setActiveMainTab('goals');
+        break;
+      case 'Посмотреть продукты':
+        handleShowProductRecs();
+        break;
+      default:
+        console.log('Unknown insight action:', action, insight);
+    }
+  };
+
   // Calculate analytics from active customer transactions (memoized for performance)
   const analytics = useMemo(() => {
     const kpi = buildKPI(activeCustomer.txns, activeCustomer.monthlyIncome);
     const subscriptions = detectSubscriptions(activeCustomer.txns);
     const topMerchants = getTopMerchants(kpi, 5);
     const categoryBreakdown = getCategoryBreakdown(kpi);
-    const insights = generateInsights(kpi, subscriptions);
+    
+    // For prevKpi, we could store previous month's data, but for demo just use undefined
+    // In production, you'd fetch previous period's KPI from storage/API
+    const insights = generateInsights(kpi, subscriptions, undefined, activeCustomer.txns);
     
     return { kpi, subscriptions, topMerchants, categoryBreakdown, insights };
   }, [activeCustomer]);
@@ -132,6 +151,7 @@ const Index = () => {
                   transactions={activeCustomer.txns}
                   activeAnalyticsTab={activeAnalyticsTab}
                   onAnalyticsTabChange={setActiveAnalyticsTab}
+                  onInsightAction={handleInsightAction}
                 />
               </TabsContent>
             </Tabs>

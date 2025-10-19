@@ -53,7 +53,7 @@ export interface KPI {
   avgDailySpend: number;
 }
 
-export type InsightType = 'warning' | 'good' | 'tip';
+export type InsightType = 'warning' | 'good' | 'tip' | 'overspend' | 'saving' | 'habit' | 'investment' | 'goal' | 'alert';
 
 export interface Insight {
   id: string;
@@ -62,4 +62,6 @@ export interface Insight {
   category?: Category;
   merchant?: string;
   actionable?: boolean;
+  delta?: number; // изменение процента/суммы
+  suggestedAction?: string; // кнопка-действие
 }

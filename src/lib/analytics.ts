@@ -123,13 +123,105 @@ export function getCategoryBreakdown(kpi: KPI): CategoryBreakdown[] {
 export function generateInsights(
   kpi: KPI,
   subscriptions: Subscription[],
-  prevKpi?: KPI
+  prevKpi?: KPI,
+  transactions?: Transaction[]
 ): Insight[] {
   const insights: Insight[] = [];
   let id = 0;
   
   const total = kpi.totalSpend;
   const cats = kpi.byCategory;
+  
+  // Alert: Overall spending increase >15%
+  if (prevKpi && prevKpi.totalSpend > 0) {
+    const increase = ((total - prevKpi.totalSpend) / prevKpi.totalSpend) * 100;
+    if (increase > 15) {
+      insights.push({
+        id: `insight-${id++}`,
+        type: 'alert',
+        text: `Общие расходы выросли на ${increase.toFixed(0)}% с прошлого месяца. Проверьте категории "Еда" и "Развлечения"`,
+        delta: increase,
+        actionable: true,
+      });
+    }
+  }
+  
+  // Check each category for overspend/saving
+  if (prevKpi) {
+    Object.entries(cats).forEach(([category, amount]) => {
+      const prevAmount = prevKpi.byCategory[category as Category] || 0;
+      if (prevAmount > 0) {
+        const delta = ((amount - prevAmount) / prevAmount) * 100;
+        
+        // Overspend: category increased >10%
+        if (delta > 10) {
+          insights.push({
+            id: `insight-${id++}`,
+            type: 'overspend',
+            text: `Расходы на ${category} выросли на ${delta.toFixed(0)}%. Возможно, стоит ограничить лимит или попробовать челлендж?`,
+            category: category as Category,
+            delta: delta,
+            suggestedAction: 'Создать челлендж',
+            actionable: true,
+          });
+        }
+        
+        // Saving: category decreased >5%
+        if (delta < -5) {
+          const saved = prevAmount - amount;
+          insights.push({
+            id: `insight-${id++}`,
+            type: 'saving',
+            text: `Ты сократил траты на ${category} на ${Math.abs(delta).toFixed(0)}% — молодец! Эти ${saved.toLocaleString()} ₸ можно перевести в копилку`,
+            category: category as Category,
+            delta: delta,
+            suggestedAction: 'Перевести в цель',
+            actionable: true,
+          });
+        }
+      }
+    });
+  }
+  
+  // Habit: Frequent transactions at same merchant
+  if (transactions && transactions.length > 0) {
+    const merchantCounts: Record<string, number> = {};
+    transactions.forEach(t => {
+      if (t.merchant && t.amount < 0) {
+        merchantCounts[t.merchant] = (merchantCounts[t.merchant] || 0) + 1;
+      }
+    });
+    
+    Object.entries(merchantCounts)
+      .filter(([_, count]) => count >= 10)
+      .slice(0, 2) // Top 2 habits
+      .forEach(([merchant, count]) => {
+        const merchantSpend = transactions
+          .filter(t => t.merchant === merchant)
+          .reduce((sum, t) => sum + Math.abs(t.amount), 0);
+        const potential = Math.round(merchantSpend * 0.4);
+        
+        insights.push({
+          id: `insight-${id++}`,
+          type: 'habit',
+          text: `Ты купил в ${merchant} ${count} раз в этом месяце. Если сократить до ${Math.round(count * 0.6)}, сэкономишь около ${potential.toLocaleString()} ₸`,
+          merchant: merchant,
+          suggestedAction: 'Создать челлендж',
+          actionable: true,
+        });
+      });
+  }
+  
+  // Investment: High free cash
+  if (kpi.freeCash > 50000) {
+    insights.push({
+      id: `insight-${id++}`,
+      type: 'investment',
+      text: `На твоём счёте стабильно больше ${kpi.freeCash.toLocaleString()} ₸. Можно разместить часть на халяль-депозит под 15% годовых`,
+      suggestedAction: 'Посмотреть продукты',
+      actionable: true,
+    });
+  }
   
   // High food spending
   if (cats['Еда'] > total * 0.35) {

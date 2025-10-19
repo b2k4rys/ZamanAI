@@ -16,6 +16,7 @@ interface AnalyticsProps {
   transactions?: Transaction[];
   activeAnalyticsTab?: string;
   onAnalyticsTabChange?: (tab: string) => void;
+  onInsightAction?: (action: string, insight: any) => void;
 }
 
 export const Analytics = ({
@@ -27,6 +28,7 @@ export const Analytics = ({
   transactions = [],
   activeAnalyticsTab = "expenses",
   onAnalyticsTabChange,
+  onInsightAction,
 }: AnalyticsProps) => {
   const [localTab, setLocalTab] = useState(activeAnalyticsTab);
 
@@ -61,7 +63,7 @@ export const Analytics = ({
               totalSpend={kpi.totalSpend}
               transactions={transactions}
             />
-            <InsightsFeed insights={insights} />
+            <InsightsFeed insights={insights} onAction={onInsightAction} />
           </div>
         </TabsContent>
         
