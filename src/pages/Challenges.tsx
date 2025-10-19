@@ -40,7 +40,30 @@ export const Challenges = () => {
   };
 
   const handleLoadSeed = () => {
+    const SEED_FLAG = 'zaman.demo.challengesSeeded';
+    
+    // Check if already seeded
+    if (localStorage.getItem(SEED_FLAG) === 'true') {
+      toast({
+        title: "Демо уже добавлены",
+        description: "Демо-челленджи уже были загружены ранее",
+      });
+      return;
+    }
+    
+    // Add seed challenges
     seedChallenges.forEach(seed => createChallenge(seed));
+    
+    // Set flag
+    localStorage.setItem(SEED_FLAG, 'true');
+    
+    // Emit event for UI update
+    window.dispatchEvent(new CustomEvent('challenges:updated'));
+    
+    toast({
+      title: "Добавлено 6 демо-челленджей 🙌",
+      description: "Примеры челленджей успешно загружены",
+    });
   };
 
   return (
@@ -56,11 +79,14 @@ export const Challenges = () => {
           </p>
         </div>
         <div className="flex gap-2">
-          {challenges.length === 0 && (
-            <Button variant="outline" onClick={handleLoadSeed}>
-              Загрузить примеры
-            </Button>
-          )}
+          <Button 
+            variant="outline" 
+            onClick={handleLoadSeed}
+            className="gap-2"
+          >
+            <Plus className="h-4 w-4" />
+            Добавить демо-челленджи
+          </Button>
           <Button className="gap-2">
             <Plus className="h-4 w-4" />
             Создать челлендж
