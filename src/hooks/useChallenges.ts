@@ -44,7 +44,7 @@ export function useChallenges(transactions: Transaction[]) {
   const createChallenge = (challenge: Omit<Challenge, 'id' | 'saved' | 'checkins' | 'alerts' | 'currentStreak' | 'bestStreak' | 'weekView'>) => {
     const newChallenge: Challenge = {
       ...challenge,
-      id: `ch_${Date.now()}`,
+      id: crypto.randomUUID(),
       saved: 0,
       checkins: [],
       alerts: [],
@@ -57,6 +57,7 @@ export function useChallenges(transactions: Transaction[]) {
     newChallenge.weekView = buildWeekView(newChallenge);
     
     saveChallenges([...challenges, newChallenge]);
+    window.dispatchEvent(new CustomEvent('challenges:updated'));
     return newChallenge;
   };
 

@@ -43,6 +43,7 @@ export type WeekView = {
 
 export type Challenge = {
   id: string;
+  templateId?: string;
   title: string;
   scope: ChallengeScope;
   durationDays: 7 | 14 | 30;

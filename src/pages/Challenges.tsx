@@ -1,18 +1,21 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus, Zap } from "lucide-react";
+import { Plus, Zap, Library } from "lucide-react";
 import { ChallengeCard } from "@/components/ChallengeCard";
+import { ChallengeBankDialog } from "@/components/ChallengeBankDialog";
 import { Challenge } from "@/types/challenge";
 import { useChallenges } from "@/hooks/useChallenges";
 import { useCustomer } from "@/contexts/CustomerContext";
 import { Card } from "@/components/ui/card";
-import { seedChallenges } from "@/data/seedChallenges";
+import { getChallengeBank } from "@/data/challengeBank";
 import { toast } from "@/hooks/use-toast";
 
 export const Challenges = () => {
   const { activeCustomer } = useCustomer();
   const { challenges, updateChallenge, deleteChallenge, createChallenge, runAutoCheckins } = useChallenges(activeCustomer.txns);
   const [selectedChallenge, setSelectedChallenge] = useState<Challenge | null>(null);
+  const [bankDialogOpen, setBankDialogOpen] = useState(false);
+  const [templates] = useState(() => getChallengeBank());
 
   // Run auto check-ins on mount and when transactions change
   useEffect(() => {
@@ -39,30 +42,53 @@ export const Challenges = () => {
     // TODO: Open detail drawer
   };
 
-  const handleLoadSeed = () => {
-    const SEED_FLAG = 'zaman.demo.challengesSeeded';
+  const handleAddFromBank = (templateIds: string[]) => {
+    const selectedTemplates = templates.filter(t => templateIds.includes(t.id));
     
-    // Check if already seeded
-    if (localStorage.getItem(SEED_FLAG) === 'true') {
+    // Check for duplicates and warn
+    const warnings: string[] = [];
+    selectedTemplates.forEach(template => {
+      const existing = challenges.find(
+        c => c.templateId === template.id && c.status === 'active'
+      );
+      if (existing) {
+        warnings.push(template.title);
+      }
+    });
+
+    if (warnings.length > 0 && warnings.length === selectedTemplates.length) {
       toast({
-        title: "Демо уже добавлены",
-        description: "Демо-челленджи уже были загружены ранее",
+        title: "⚠️ Внимание",
+        description: `У вас уже есть активные челленджи: ${warnings.join(', ')}`,
+        duration: 5000,
       });
-      return;
     }
-    
-    // Add seed challenges
-    seedChallenges.forEach(seed => createChallenge(seed));
-    
-    // Set flag
-    localStorage.setItem(SEED_FLAG, 'true');
-    
-    // Emit event for UI update
-    window.dispatchEvent(new CustomEvent('challenges:updated'));
-    
+
+    // Create challenges from templates
+    selectedTemplates.forEach(template => {
+      const startDate = new Date().toISOString().split('T')[0];
+      const daysLeft = template.period === 'month' ? 30 : 7;
+      const endDate = new Date(Date.now() + daysLeft * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .split('T')[0];
+
+      createChallenge({
+        templateId: template.id,
+        title: template.title,
+        scope: (template.scope as any) || { kind: 'category', value: 'Другое' },
+        durationDays: (template.period === 'month' ? 30 : 7) as 7 | 14 | 30,
+        target: { mode: 'amount', value: template.targetAmount },
+        startDate,
+        endDate,
+        baseline: template.targetAmount * 1.5,
+        status: 'active',
+        hacks: [],
+      });
+    });
+
     toast({
-      title: "Добавлено 6 демо-челленджей 🙌",
-      description: "Примеры челленджей успешно загружены",
+      title: `Добавлено ${selectedTemplates.length} челленджей из банка 🙌`,
+      description: "Челленджи успешно созданы",
     });
   };
 
@@ -81,11 +107,11 @@ export const Challenges = () => {
         <div className="flex gap-2">
           <Button 
             variant="outline" 
-            onClick={handleLoadSeed}
+            onClick={() => setBankDialogOpen(true)}
             className="gap-2"
           >
-            <Plus className="h-4 w-4" />
-            Добавить демо-челленджи
+            <Library className="h-4 w-4" />
+            Из банка шаблонов
           </Button>
           <Button className="gap-2">
             <Plus className="h-4 w-4" />
@@ -110,8 +136,9 @@ export const Challenges = () => {
               Попробуйте отказаться от кофе на неделю или сократить расходы на доставку!
             </p>
             <div className="flex gap-2 justify-center">
-              <Button onClick={handleLoadSeed} variant="outline">
-                Посмотреть примеры
+              <Button onClick={() => setBankDialogOpen(true)} variant="outline">
+                <Library className="h-4 w-4 mr-2" />
+                Из банка шаблонов
               </Button>
               <Button>Создать челлендж</Button>
             </div>
@@ -160,6 +187,14 @@ export const Challenges = () => {
           </Card>
         </div>
       )}
+
+      {/* Challenge Bank Dialog */}
+      <ChallengeBankDialog
+        open={bankDialogOpen}
+        onOpenChange={setBankDialogOpen}
+        templates={templates}
+        onAddSelected={handleAddFromBank}
+      />
     </div>
   );
 };
