@@ -10,7 +10,7 @@ import { seedChallenges } from "@/data/seedChallenges";
 
 export const Challenges = () => {
   const { activeCustomer } = useCustomer();
-  const { challenges, updateChallenge, deleteChallenge, createChallenge } = useChallenges(activeCustomer.txns);
+  const { challenges, updateChallenge, deleteChallenge, createChallenge, doCheckin } = useChallenges(activeCustomer.txns);
   const [selectedChallenge, setSelectedChallenge] = useState<Challenge | null>(null);
 
   const handlePause = (id: string) => {
@@ -20,6 +20,10 @@ export const Challenges = () => {
   const handleViewDetails = (challenge: Challenge) => {
     setSelectedChallenge(challenge);
     // TODO: Open detail drawer
+  };
+
+  const handleCheckin = (id: string) => {
+    doCheckin(id);
   };
 
   const handleLoadSeed = () => {
@@ -83,6 +87,7 @@ export const Challenges = () => {
               onViewDetails={handleViewDetails}
               onPause={handlePause}
               onDelete={deleteChallenge}
+              onCheckin={handleCheckin}
             />
           ))}
         </div>

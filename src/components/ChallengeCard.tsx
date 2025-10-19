@@ -3,6 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { WeekStreakRow } from "@/components/WeekStreakRow";
 import { 
   calcProgress, 
   daysRemaining, 
@@ -10,20 +11,22 @@ import {
   getStatusVariant,
   targetFromBaseline 
 } from "@/lib/challengeLogic";
-import { Zap, Calendar, TrendingDown, MoreVertical } from "lucide-react";
+import { Zap, Calendar, TrendingDown, Flame, CheckCircle } from "lucide-react";
 
 interface ChallengeCardProps {
   challenge: Challenge;
   onViewDetails: (challenge: Challenge) => void;
   onPause: (id: string) => void;
   onDelete: (id: string) => void;
+  onCheckin: (id: string) => void;
 }
 
 export const ChallengeCard = ({ 
   challenge, 
   onViewDetails, 
   onPause, 
-  onDelete 
+  onDelete,
+  onCheckin
 }: ChallengeCardProps) => {
   const progress = calcProgress(challenge);
   const remaining = daysRemaining(challenge);
@@ -38,9 +41,15 @@ export const ChallengeCard = ({
     }
   };
 
+  const todayCheckedIn = challenge.checkins.some(c => {
+    const checkinDate = new Date(c.date).toISOString().split('T')[0];
+    const today = new Date().toISOString().split('T')[0];
+    return checkinDate === today && c.state === 'done';
+  });
+
   return (
-    <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer group">
-      <div onClick={() => onViewDetails(challenge)}>
+    <Card className="p-6 hover:shadow-lg transition-shadow group">
+      <div>
         <div className="flex items-start justify-between mb-4">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-2">
@@ -60,6 +69,24 @@ export const ChallengeCard = ({
         </div>
 
         <div className="space-y-4">
+          {/* Week Streak */}
+          {challenge.status === 'active' && (
+            <div className="space-y-2">
+              <WeekStreakRow weekView={challenge.weekView} />
+              <div className="flex items-center justify-between text-xs">
+                <div className="flex items-center gap-1 text-primary">
+                  <Flame className="h-4 w-4" />
+                  <span className="font-semibold">
+                    Текущий стрик: {challenge.currentStreak} дн
+                  </span>
+                </div>
+                <div className="text-muted-foreground">
+                  Лучший: {challenge.bestStreak} дн
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Progress */}
           <div>
             <div className="flex items-center justify-between mb-2">
@@ -117,7 +144,30 @@ export const ChallengeCard = ({
       </div>
 
       {/* Actions */}
-      <div className="flex items-center gap-2 mt-4 pt-4 border-t opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="flex items-center gap-2 mt-4 pt-4 border-t">
+        {challenge.status === 'active' && (
+          <Button 
+            variant={todayCheckedIn ? "secondary" : "default"}
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (!todayCheckedIn) {
+                onCheckin(challenge.id);
+              }
+            }}
+            disabled={todayCheckedIn}
+            className="flex-1"
+          >
+            {todayCheckedIn ? (
+              <>
+                <CheckCircle className="h-4 w-4 mr-1" />
+                Чек-ин засчитан
+              </>
+            ) : (
+              'Чек-ин на сегодня'
+            )}
+          </Button>
+        )}
         <Button 
           variant="outline" 
           size="sm"

@@ -1,5 +1,6 @@
-import { Challenge, ChallengeScope, SaveHack } from "@/types/challenge";
+import { Challenge, ChallengeScope, SaveHack, Checkin, DayState, WeekDay, WeekView } from "@/types/challenge";
 import { Transaction } from "@/types/transaction";
+import { startOfWeek, addDays, isToday, isSameDay } from "date-fns";
 
 /**
  * Calculate baseline spending for a scope over the past N days
@@ -181,4 +182,108 @@ export function getStatusVariant(status: Challenge['status']): "default" | "seco
     case 'failed': return 'destructive';
     default: return 'outline';
   }
+}
+
+/**
+ * Build week view for challenge (Mon-Sun)
+ */
+export function buildWeekView(challenge: Challenge, now: Date = new Date()): WeekView {
+  const start = startOfWeek(now, { weekStartsOn: 1 }); // Monday
+  
+  return {
+    weekStart: start.toISOString(),
+    days: [...Array(7)].map((_, i) => {
+      const d = addDays(start, i);
+      const checkin = challenge.checkins.find(c => isSameDay(new Date(c.date), d));
+      
+      let state: DayState = 'rest';
+      const challengeStart = new Date(challenge.startDate);
+      const challengeEnd = new Date(challenge.endDate);
+      
+      if (d < challengeStart || d > challengeEnd) {
+        state = 'rest';
+      } else if (isToday(d)) {
+        state = checkin?.state ?? 'today';
+      } else if (d > new Date()) {
+        state = 'rest';
+      } else {
+        state = checkin?.state ?? 'missed';
+      }
+      
+      return { 
+        w: i as WeekDay, 
+        state,
+        saved: checkin?.saved 
+      };
+    })
+  };
+}
+
+/**
+ * Recompute streaks based on checkins
+ */
+export function recomputeStreaks(challenge: Challenge): { current: number; best: number } {
+  const sortedCheckins = [...challenge.checkins]
+    .filter(c => c.state === 'done')
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  
+  if (sortedCheckins.length === 0) {
+    return { current: 0, best: 0 };
+  }
+  
+  let current = 0;
+  let maxStreak = 0;
+  let tempStreak = 1;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  // Calculate current streak from today backwards
+  for (let i = 0; i < sortedCheckins.length; i++) {
+    const checkinDate = new Date(sortedCheckins[i].date);
+    checkinDate.setHours(0, 0, 0, 0);
+    
+    if (i === 0) {
+      // Check if most recent checkin is today or yesterday
+      const daysDiff = Math.floor((today.getTime() - checkinDate.getTime()) / (1000 * 60 * 60 * 24));
+      if (daysDiff <= 1) {
+        current = 1;
+      }
+    } else {
+      const prevDate = new Date(sortedCheckins[i - 1].date);
+      prevDate.setHours(0, 0, 0, 0);
+      const daysDiff = Math.floor((prevDate.getTime() - checkinDate.getTime()) / (1000 * 60 * 60 * 24));
+      
+      if (daysDiff === 1) {
+        if (i < current || current === 0) {
+          current++;
+        }
+        tempStreak++;
+      } else {
+        maxStreak = Math.max(maxStreak, tempStreak);
+        tempStreak = 1;
+      }
+    }
+  }
+  
+  maxStreak = Math.max(maxStreak, tempStreak);
+  const best = Math.max(challenge.bestStreak, maxStreak, current);
+  
+  return { current, best };
+}
+
+/**
+ * Estimate daily saving based on baseline and target
+ */
+export function estimatedDailySaving(challenge: Challenge): number {
+  const target = targetFromBaseline(challenge);
+  const potentialSaving = challenge.baseline - target;
+  return Math.round(potentialSaving / challenge.durationDays);
+}
+
+/**
+ * Get week day label (Mon-Sun in Russian)
+ */
+export function getWeekDayLabel(day: WeekDay): string {
+  const labels = ['П', 'В', 'С', 'Ч', 'П', 'С', 'В'];
+  return labels[day];
 }

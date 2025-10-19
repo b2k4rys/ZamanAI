@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
-import { Challenge, ChallengeAlert } from "@/types/challenge";
+import { Challenge, ChallengeAlert, Checkin } from "@/types/challenge";
 import { Transaction } from "@/types/transaction";
+import { toast } from "@/hooks/use-toast";
 import { 
   matchesScope, 
   inDateRange, 
@@ -9,10 +10,13 @@ import {
   findHack,
   calcRoundup,
   clamp,
-  isActive
+  isActive,
+  buildWeekView,
+  recomputeStreaks,
+  estimatedDailySaving
 } from "@/lib/challengeLogic";
 
-const STORAGE_KEY = "zaman.challenges.v1";
+const STORAGE_KEY = "zaman.challenges.v2";
 
 export function useChallenges(transactions: Transaction[]) {
   const [challenges, setChallenges] = useState<Challenge[]>([]);
@@ -36,14 +40,21 @@ export function useChallenges(transactions: Transaction[]) {
   };
 
   // Create new challenge
-  const createChallenge = (challenge: Omit<Challenge, 'id' | 'saved' | 'checkins' | 'alerts'>) => {
+  const createChallenge = (challenge: Omit<Challenge, 'id' | 'saved' | 'checkins' | 'alerts' | 'currentStreak' | 'bestStreak' | 'weekView'>) => {
     const newChallenge: Challenge = {
       ...challenge,
       id: `ch_${Date.now()}`,
       saved: 0,
       checkins: [],
       alerts: [],
+      currentStreak: 0,
+      bestStreak: 0,
+      weekView: { weekStart: new Date().toISOString(), days: [] },
     };
+    
+    // Build initial week view
+    newChallenge.weekView = buildWeekView(newChallenge);
+    
     saveChallenges([...challenges, newChallenge]);
     return newChallenge;
   };
@@ -109,39 +120,90 @@ export function useChallenges(transactions: Transaction[]) {
     });
   };
 
-  // Daily check-in for all active challenges
+  // Perform check-in for today
+  const doCheckin = (challengeId: string, options: { note?: string; saved?: number; auto?: boolean } = {}) => {
+    const challenge = challenges.find(ch => ch.id === challengeId);
+    if (!challenge) return;
+
+    const todayISO = new Date().toISOString().split('T')[0];
+    const existingIdx = challenge.checkins.findIndex(c => c.date.startsWith(todayISO));
+    
+    const saved = options.saved ?? estimatedDailySaving(challenge);
+    const checkin: Checkin = {
+      date: new Date().toISOString(),
+      state: 'done',
+      saved,
+      note: options.note,
+      auto: options.auto,
+    };
+
+    let newCheckins = [...challenge.checkins];
+    if (existingIdx >= 0) {
+      newCheckins[existingIdx] = checkin;
+    } else {
+      newCheckins.push(checkin);
+    }
+
+    const newSaved = challenge.saved + saved;
+    const { current, best } = recomputeStreaks({ ...challenge, checkins: newCheckins });
+
+    updateChallenge(challengeId, {
+      saved: newSaved,
+      checkins: newCheckins,
+      currentStreak: current,
+      bestStreak: best,
+      weekView: buildWeekView({ ...challenge, checkins: newCheckins }),
+    });
+
+    if (!options.auto) {
+      toast({
+        title: "Чек-ин засчитан! 👍",
+        description: `Сэкономлено ${saved.toLocaleString()} ₸`,
+      });
+    }
+  };
+
+  // Daily check-in for all active challenges (auto)
   const performDailyCheckin = () => {
     challenges.forEach(challenge => {
       if (!isActive(challenge)) return;
 
       const todaySpend = getTodaySpend(transactions, challenge);
-      const targetSpend = targetFromBaseline(challenge);
-      const baselineDaily = challenge.baseline / 30;
-      const targetDaily = targetSpend / 30;
-      const delta = Math.max(0, baselineDaily - todaySpend);
-
-      // Update saved amount
-      let newSaved = challenge.saved + delta;
-
-      // Apply smart save if enabled
-      const smartSave = findHack(challenge.hacks, 'smart_save');
-      if (smartSave?.enabled && delta > 0) {
-        const saveAmount = clamp(delta * 0.3, 500, smartSave.dailyMax);
-        newSaved += saveAmount;
+      const targetDaily = targetFromBaseline(challenge) / 30;
+      
+      // Auto check-in if within target
+      if (todaySpend <= targetDaily) {
+        const delta = Math.max(0, targetDaily - todaySpend);
+        
+        let saved = delta;
+        const smartSave = findHack(challenge.hacks, 'smart_save');
+        if (smartSave?.enabled && delta > 0) {
+          saved += clamp(delta * 0.3, 500, smartSave.dailyMax);
+        }
+        
+        doCheckin(challenge.id, { saved, auto: true });
+      } else {
+        // Mark as missed
+        const todayISO = new Date().toISOString().split('T')[0];
+        const existingIdx = challenge.checkins.findIndex(c => c.date.startsWith(todayISO));
+        
+        if (existingIdx < 0) {
+          const checkin: Checkin = {
+            date: new Date().toISOString(),
+            state: 'missed',
+            saved: 0,
+            auto: true,
+          };
+          
+          updateChallenge(challenge.id, {
+            checkins: [...challenge.checkins, checkin],
+            weekView: buildWeekView(challenge),
+          });
+        }
       }
 
-      updateChallenge(challenge.id, {
-        saved: newSaved,
-        checkins: [
-          ...challenge.checkins,
-          {
-            date: new Date().toISOString(),
-            done: todaySpend <= targetDaily,
-          }
-        ]
-      });
-
       // Check for milestones
+      const newSaved = challenge.saved;
       if (newSaved >= challenge.target.value * 0.5 && challenge.saved < challenge.target.value * 0.5) {
         addAlert(challenge.id, 'milestone', `🎉 Полпути! Уже сэкономлено ${newSaved.toLocaleString()} ₸`);
       }
@@ -156,5 +218,6 @@ export function useChallenges(transactions: Transaction[]) {
     addAlert,
     evaluateTransaction,
     performDailyCheckin,
+    doCheckin,
   };
 }

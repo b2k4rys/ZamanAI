@@ -1,6 +1,6 @@
 import { Challenge } from "@/types/challenge";
 
-export const seedChallenges: Omit<Challenge, 'id' | 'saved' | 'checkins' | 'alerts'>[] = [
+export const seedChallenges: Omit<Challenge, 'id' | 'saved' | 'checkins' | 'alerts' | 'currentStreak' | 'bestStreak' | 'weekView'>[] = [
   {
     title: "7 дней без кофе ☕",
     scope: { kind: 'merchant', value: 'Starbucks' },

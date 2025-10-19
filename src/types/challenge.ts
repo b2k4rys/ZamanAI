@@ -19,16 +19,26 @@ export type ChallengeTarget = {
 
 export type ChallengeStatus = 'active' | 'paused' | 'failed' | 'completed';
 
-export type ChallengeCheckin = {
+export type DayState = 'done' | 'missed' | 'today' | 'rest';
+export type WeekDay = 0 | 1 | 2 | 3 | 4 | 5 | 6;
+
+export type Checkin = {
   date: string;
-  done: boolean;
+  state: DayState;
+  saved: number;
   note?: string;
+  auto?: boolean;
 };
 
 export type ChallengeAlert = {
   date: string;
   type: 'near_fail' | 'fail' | 'milestone';
   text: string;
+};
+
+export type WeekView = {
+  weekStart: string;
+  days: { w: WeekDay; state: DayState; saved?: number }[];
 };
 
 export type Challenge = {
@@ -43,7 +53,13 @@ export type Challenge = {
   saved: number;
   status: ChallengeStatus;
   hacks: SaveHack[];
-  checkins: ChallengeCheckin[];
+  checkins: Checkin[];
   alerts: ChallengeAlert[];
   goalId?: string;
+  currentStreak: number;
+  bestStreak: number;
+  weekView: WeekView;
 };
+
+// Legacy type for backwards compatibility
+export type ChallengeCheckin = Checkin;
