@@ -4,6 +4,7 @@ import { Challenge } from "@/types/challenge";
 import { Tip, TipType } from "@/types/tip";
 import { differenceInDays, addDays, isSameDay } from "date-fns";
 import { detectRecurringBills, estimateDaysToSalary, calculateAvgDailySpend, calculateBalance } from "./reminderDetection";
+import { getUserProfile, generateBenchmarkInsights } from "./benchmarkEngine";
 
 /**
  * Check if category has overspending
@@ -319,6 +320,26 @@ export function generateSmartTips(
         { label: 'Всё нормально', action: { kind: 'snooze', hours: 168 } }
       ],
       priority: 4,
+    });
+  }
+
+  // 8. Benchmark insights (if profile exists)
+  const profile = getUserProfile();
+  if (profile) {
+    const benchmarkInsights = generateBenchmarkInsights(txns, profile);
+    benchmarkInsights.forEach((insight, idx) => {
+      tips.push({
+        id: `tip_benchmark_${idx}_${today.toISOString().split('T')[0]}`,
+        type: insight.includes('экономишь') ? 'saving_opportunity' : 'overspend',
+        title: 'Сравнение с другими',
+        body: insight,
+        ts: now,
+        actions: [
+          { label: 'Посмотреть детали', action: { kind: 'open_budget_planner' } },
+          { label: 'Позже', action: { kind: 'snooze', hours: 72 } }
+        ],
+        priority: 6,
+      });
     });
   }
 

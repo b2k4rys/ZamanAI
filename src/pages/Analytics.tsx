@@ -5,6 +5,7 @@ import { SubscriptionsList } from "@/components/SubscriptionsList";
 import { InsightsFeed } from "@/components/InsightsFeed";
 import { TransactionManager } from "@/components/TransactionManager";
 import { ReflectionModal } from "@/components/ReflectionModal";
+import { BenchmarkComparison } from "@/components/BenchmarkComparison";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Transaction } from "@/types/transaction";
@@ -53,11 +54,12 @@ export const Analytics = ({
       </div>
 
       <Tabs value={localTab} onValueChange={handleTabChange} className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="expenses">Расходы</TabsTrigger>
           <TabsTrigger value="merchants">Мерчанты</TabsTrigger>
           <TabsTrigger value="subscriptions">Подписки</TabsTrigger>
           <TabsTrigger value="transactions">Транзакции</TabsTrigger>
+          <TabsTrigger value="comparison">Сравнение</TabsTrigger>
           <TabsTrigger value="reflection">Reflection</TabsTrigger>
         </TabsList>
         
@@ -85,6 +87,10 @@ export const Analytics = ({
         
         <TabsContent value="transactions" className="mt-6">
           <TransactionManager />
+        </TabsContent>
+
+        <TabsContent value="comparison" className="mt-6">
+          <BenchmarkComparison />
         </TabsContent>
 
         <TabsContent value="reflection" className="mt-6">
