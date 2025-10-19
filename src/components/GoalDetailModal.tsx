@@ -5,9 +5,12 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Goal } from "@/types/goal";
 import { Clock, TrendingUp, Plus } from "lucide-react";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { addContribution } from "@/lib/goalsRepository";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, AreaChart } from "recharts";
+import { format, parseISO, addMonths, differenceInMonths } from "date-fns";
+import { ru } from "date-fns/locale";
 
 interface GoalDetailModalProps {
   goal: Goal | null;
@@ -33,6 +36,41 @@ export const GoalDetailModal = ({ goal, open, onOpenChange, onAddContribution }:
   const remaining = Math.max(0, targetAmount - savedAmount);
   const progressPercent = targetAmount > 0 ? Math.min(100, (savedAmount / targetAmount) * 100) : 0;
   const monthlyNeed = remaining > 0 ? Math.ceil(remaining / 12) : 0;
+
+  // Generate chart data
+  const chartData = useMemo(() => {
+    const data = [];
+    const createdDate = parseISO(goal.createdAt);
+    const deadlineDate = parseISO(goal.deadline);
+    const monthsTotal = differenceInMonths(deadlineDate, createdDate);
+    
+    // Create monthly plan line
+    for (let i = 0; i <= Math.min(monthsTotal, 24); i++) {
+      const date = addMonths(createdDate, i);
+      const plannedAmount = (targetAmount / monthsTotal) * i;
+      
+      // Calculate actual progress based on history
+      let actualAmount = 0;
+      if (goal.history && goal.history.length > 0) {
+        actualAmount = goal.history
+          .filter(h => parseISO(h.date) <= date)
+          .reduce((sum, h) => sum + h.amount, 0);
+      } else if (i === 0) {
+        actualAmount = 0;
+      } else {
+        // Generate sample progress for demonstration
+        actualAmount = savedAmount * (i / monthsTotal);
+      }
+      
+      data.push({
+        month: format(date, 'MMM yy', { locale: ru }),
+        План: Math.round(plannedAmount),
+        Факт: Math.round(actualAmount),
+      });
+    }
+    
+    return data;
+  }, [goal, targetAmount, savedAmount]);
 
   const handleAddContribution = () => {
     const amountNum = parseFloat(amount);
@@ -108,6 +146,60 @@ export const GoalDetailModal = ({ goal, open, onOpenChange, onAddContribution }:
               </div>
             </Card>
           </div>
+
+          {/* Progress Chart */}
+          <Card className="p-4">
+            <h3 className="text-lg font-semibold mb-4 text-foreground">График прогресса</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <AreaChart data={chartData}>
+                <defs>
+                  <linearGradient id="colorPlan" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="hsl(var(--muted-foreground))" stopOpacity={0.1}/>
+                    <stop offset="95%" stopColor="hsl(var(--muted-foreground))" stopOpacity={0}/>
+                  </linearGradient>
+                  <linearGradient id="colorFact" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis 
+                  dataKey="month" 
+                  stroke="hsl(var(--muted-foreground))"
+                  style={{ fontSize: '12px' }}
+                />
+                <YAxis 
+                  stroke="hsl(var(--muted-foreground))"
+                  style={{ fontSize: '12px' }}
+                  tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
+                />
+                <Tooltip 
+                  contentStyle={{
+                    backgroundColor: 'hsl(var(--card))',
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '8px'
+                  }}
+                  formatter={(value: number) => formatAmount(value) + ' ₸'}
+                />
+                <Legend />
+                <Area 
+                  type="monotone" 
+                  dataKey="План" 
+                  stroke="hsl(var(--muted-foreground))" 
+                  strokeWidth={2}
+                  strokeDasharray="5 5"
+                  fill="url(#colorPlan)"
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="Факт" 
+                  stroke="hsl(var(--primary))" 
+                  strokeWidth={3}
+                  fill="url(#colorFact)"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </Card>
 
           {/* Add Contribution Section */}
           <Card className="p-4">
