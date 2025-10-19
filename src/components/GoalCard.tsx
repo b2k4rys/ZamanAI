@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useState, useEffect } from "react";
-import { getGoals } from "@/lib/goalsRepository";
+import { getGoals, deleteGoal } from "@/lib/goalsRepository";
 import { Goal } from "@/types/goal";
 import { formatAmount, getRiskBadge } from "@/lib/goalCalculations";
 import { format, parseISO } from "date-fns";
@@ -143,7 +143,7 @@ export const GoalCard = ({ contributions = {} }: GoalCardProps) => {
                           onClick={(e) => {
                             e.stopPropagation();
                             if (confirm("Удалить цель?")) {
-                              // deleteGoal(goal.id);
+                              deleteGoal(goal.id);
                             }
                           }}
                           className="text-destructive"
