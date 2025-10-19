@@ -256,26 +256,17 @@ export const ChatAssistant = ({
   const handleGetTips = () => {
     const newTips = generateTips();
     
-    if (newTips.length === 0) {
-      const noTipsMsg: TextMessage = {
-        id: `no-tips-${Date.now()}`,
-        role: 'assistant',
-        kind: 'text',
-        content: 'У меня пока нет новых советов для вас. Всё идёт отлично! 💚',
-      };
-      setMessages(prev => [...prev, noTipsMsg]);
-      return;
-    }
-    
-    // Intro message
+    // Always show tips (either data-driven or fallback)
     const introMsg: TextMessage = {
       id: `tips-intro-${Date.now()}`,
       role: 'assistant',
       kind: 'text',
-      content: `Проанализировал ваши транзакции, цели и челленджи. Вот что я заметил:`,
+      content: newTips.length > 0 
+        ? `Проанализировал ваши данные. Вот что я заметил:` 
+        : `Вот несколько советов, которые могут помочь:`,
     };
     
-    // Show top 3 tips
+    // Show tips
     const tipsToShow = newTips.slice(0, 3);
     const tipMessages: TipMessage[] = tipsToShow.map(tip => ({
       id: `tip-${tip.id}`,

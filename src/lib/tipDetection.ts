@@ -76,6 +76,77 @@ export function detectDuplicateSubs(txns: Transaction[]): { a: string; b: string
 }
 
 /**
+ * Fallback tips when no data-driven tips are available
+ */
+function getFallbackTips(): Tip[] {
+  const now = new Date().toISOString();
+  const today = new Date();
+  
+  return [
+    {
+      id: `tip_fallback_regular_${today.toISOString().split('T')[0]}`,
+      type: 'saving_opportunity',
+      title: 'Регулярность важнее суммы',
+      body: 'Напоминаю: даже **3 000 ₸** каждую неделю лучше, чем 50 000 раз в квартал. Давай начнём с малого?',
+      ts: now,
+      actions: [
+        { label: 'Посмотреть цели', action: { kind: 'open_budget_planner' } },
+        { label: 'Позже', action: { kind: 'snooze', hours: 48 } }
+      ],
+      priority: 5,
+    },
+    {
+      id: `tip_fallback_subs_${today.toISOString().split('T')[0]}`,
+      type: 'duplicate_subs',
+      title: 'Проверь подписки',
+      body: 'Когда последний раз смотрел список подписок? Может, есть те, что давно не используешь? Проверим?',
+      ts: now,
+      actions: [
+        { label: 'Показать подписки', action: { kind: 'open_subscriptions' } },
+        { label: 'Напомнить через неделю', action: { kind: 'snooze', hours: 168 } }
+      ],
+      priority: 4,
+    },
+    {
+      id: `tip_fallback_challenge_${today.toISOString().split('T')[0]}`,
+      type: 'challenge_checkin',
+      title: 'Мини-челлендж на 3 дня',
+      body: '**3 дня без доставки еды** = примерно **+2 000 ₸** на цель. Звучит как план? Запустим? 🌿',
+      ts: now,
+      actions: [
+        { label: 'Создать челлендж', action: { kind: 'create_challenge', scope: { kind: 'category', value: 'Еда' } } },
+        { label: 'Не сейчас', action: { kind: 'snooze', hours: 72 } }
+      ],
+      priority: 6,
+    },
+    {
+      id: `tip_fallback_deposit_${today.toISOString().split('T')[0]}`,
+      type: 'saving_opportunity',
+      title: 'Есть свободные деньги?',
+      body: 'Если на счёте лежит лишнее, можно перевести часть на халяль-депозит под **15% годовых**. Посмотрим варианты?',
+      ts: now,
+      actions: [
+        { label: 'Посмотреть продукты', action: { kind: 'open_budget_planner' } },
+        { label: 'Не интересно', action: { kind: 'snooze', hours: 168 } }
+      ],
+      priority: 5,
+    },
+    {
+      id: `tip_fallback_reminder_${today.toISOString().split('T')[0]}`,
+      type: 'overspend',
+      title: 'Еженедельный отчёт',
+      body: 'Хочешь раз в неделю получать топ-3 категории расходов? Так легче контролировать бюджет 💚',
+      ts: now,
+      actions: [
+        { label: 'Включить отчёты', action: { kind: 'open_budget_planner' } },
+        { label: 'Нет, спасибо', action: { kind: 'snooze', hours: 168 } }
+      ],
+      priority: 4,
+    },
+  ];
+}
+
+/**
  * Generate smart tips based on customer data
  */
 export function generateSmartTips(
@@ -95,11 +166,11 @@ export function generateSmartTips(
       tips.push({
         id: `tip_bill_${bill.merchant}_${bill.nextDate}`,
         type: 'bill_upcoming',
-        title: daysUntil === 0 ? `Сегодня списание за ${bill.merchant}` : `Завтра списание за ${bill.merchant}`,
-        body: `${daysUntil === 0 ? 'Сегодня' : 'Завтра'} списание за **${bill.merchant}** на **${bill.amount.toLocaleString('ru-KZ')} ₸**. Переведу заранее?`,
+        title: daysUntil === 0 ? `Сегодня списание` : `Завтра списание`,
+        body: `${daysUntil === 0 ? 'Сегодня' : 'Завтра'} списание за **${bill.merchant}** на **${bill.amount.toLocaleString('ru-KZ')} ₸**. Переведу заранее, чтобы не забыть? 💚`,
         ts: now,
         actions: [
-          { label: 'Оплатить', action: { kind: 'pay_bill', merchant: bill.merchant, amount: bill.amount } },
+          { label: 'Оплатить сейчас', action: { kind: 'pay_bill', merchant: bill.merchant, amount: bill.amount } },
           { label: 'Напомнить завтра', action: { kind: 'snooze', hours: 24 } }
         ],
         priority: 9,
@@ -118,12 +189,12 @@ export function generateSmartTips(
       tips.push({
         id: `tip_lowbal_${today.toISOString().split('T')[0]}`,
         type: 'low_balance',
-        title: `Остаток ${balance.toLocaleString('ru-KZ')} ₸ на ${daysToSalary} дн`,
-        body: `Осталось **${balance.toLocaleString('ru-KZ')} ₸** на **${daysToSalary} дней**. Средний дневной бюджет: **${Math.round(dailyBudget).toLocaleString('ru-KZ')} ₸** (обычно тратите ${Math.round(avgDaily).toLocaleString('ru-KZ')} ₸). Распределим?`,
+        title: `На карте осталось ${balance.toLocaleString('ru-KZ')} ₸`,
+        body: `На карте осталось **${balance.toLocaleString('ru-KZ')} ₸**, а впереди **${daysToSalary} дней**. Обычно тратишь около **${Math.round(avgDaily).toLocaleString('ru-KZ')} ₸/день**. Давай распределим бюджет?`,
         ts: now,
         actions: [
           { label: 'Распределить бюджет', action: { kind: 'open_budget_planner' } },
-          { label: 'Позже', action: { kind: 'snooze', hours: 24 } }
+          { label: 'Разберусь сам', action: { kind: 'snooze', hours: 24 } }
         ],
         priority: 8,
       });
@@ -135,15 +206,22 @@ export function generateSmartTips(
   categories.forEach(cat => {
     const delta = detectCategoryOverspend(txns, cat, 15);
     if (delta > 0) {
+      const categoryMsg: Record<string, string> = {
+        'Еда': 'Траты на еду',
+        'Транспорт': 'Траты на транспорт',
+        'Развлечения': 'Развлечения',
+        'Покупки': 'Покупки',
+        'Подписки': 'Подписки',
+      };
       tips.push({
         id: `tip_overspend_${cat}_${today.toISOString().split('T')[0]}`,
         type: 'overspend',
-        title: `${cat}: рост на ${delta.toFixed(0)}%`,
-        body: `Категория **${cat}** выросла на **${delta.toFixed(0)}%** относительно прошлого месяца. Хочешь установить лимит или создать челлендж для контроля?`,
+        title: `${categoryMsg[cat] || cat}: рост на ${delta.toFixed(0)}%`,
+        body: `**${categoryMsg[cat] || cat}** выросли на **${delta.toFixed(0)}%** по сравнению с прошлым месяцем. Хочешь ограничим или создадим челлендж для контроля?`,
         ts: now,
         actions: [
           { label: 'Создать челлендж', action: { kind: 'create_challenge', scope: { kind: 'category', value: cat } } },
-          { label: 'Позже', action: { kind: 'snooze', hours: 48 } }
+          { label: 'Посмотрю позже', action: { kind: 'snooze', hours: 48 } }
         ],
         priority: 6,
       });
@@ -156,12 +234,12 @@ export function generateSmartTips(
     tips.push({
       id: `tip_saving_${today.toISOString().split('T')[0]}`,
       type: 'saving_opportunity',
-      title: `Свободно ~${Math.round(freeCash).toLocaleString('ru-KZ')} ₸`,
-      body: `Лежит свободно примерно **${Math.round(freeCash).toLocaleString('ru-KZ')} ₸**. Можем перевести часть на халяль-депозит под 15% годовых?`,
+      title: `Свободно примерно ${Math.round(freeCash).toLocaleString('ru-KZ')} ₸`,
+      body: `Лежит свободно примерно **${Math.round(freeCash).toLocaleString('ru-KZ')} ₸**. Перекинуть часть на депозит под **15% годовых**?`,
       ts: now,
       actions: [
         { label: 'Посмотреть продукты', action: { kind: 'open_budget_planner' } },
-        { label: 'Позже', action: { kind: 'snooze', hours: 72 } }
+        { label: 'Не сейчас', action: { kind: 'snooze', hours: 72 } }
       ],
       priority: 5,
     });
@@ -182,18 +260,19 @@ export function generateSmartTips(
       .reduce((sum, h) => sum + (h.amount || 0), 0);
     
     const missing = monthlyPlan - monthlyContributions;
+    const remaining = target - saved;
     
     if (progress < 80 && missing > 1000) {
       const suggested = Math.round(missing);
       tips.push({
         id: `tip_goal_${goal.id}_${today.toISOString().split('T')[0]}`,
         type: 'goal_nudge',
-        title: `До цели "${goal.name}" не хватает`,
-        body: `До цели **«${goal.name}»** в этом месяце не доложено **${suggested.toLocaleString('ru-KZ')} ₸** (план: ${monthlyPlan.toLocaleString('ru-KZ')} ₸/мес). Пополнить сейчас?`,
+        title: `До цели "${goal.name}"`,
+        body: `До цели **«${goal.name}»** осталось **${remaining.toLocaleString('ru-KZ')} ₸**. В этом месяце пока не доложено **${suggested.toLocaleString('ru-KZ')} ₸**. Добавим немного сейчас?`,
         ts: now,
         actions: [
           { label: 'Пополнить цель', action: { kind: 'transfer_to_goal', goalId: goal.id, amount: suggested } },
-          { label: 'Позже', action: { kind: 'snooze', hours: 48 } }
+          { label: 'В конце месяца', action: { kind: 'snooze', hours: 48 } }
         ],
         priority: 7,
       });
@@ -214,8 +293,8 @@ export function generateSmartTips(
       tips.push({
         id: `tip_challenge_${challenge.id}_${today.toISOString().split('T')[0]}`,
         type: 'challenge_checkin',
-        title: `Чек-ин по "${challenge.title}"`,
-        body: `Сегодня чек-ин по челленджу **«${challenge.title}»**. Уже справились с задачей? Отметим! 🌿`,
+        title: `Чек-ин по челленджу`,
+        body: `Сегодня чек-ин по челленджу **«${challenge.title}»**. Уже справился? Засчитаем день! 🌿`,
         ts: now,
         actions: [
           { label: 'Засчитать чек-ин', action: { kind: 'open_budget_planner' } },
@@ -233,16 +312,21 @@ export function generateSmartTips(
       id: `tip_dupsubs_${today.toISOString().split('T')[0]}`,
       type: 'duplicate_subs',
       title: `Похожие подписки`,
-      body: `Замечены две похожие подписки: **${duplicates.a}** и **${duplicates.b}**. Может, одну из них отключить?`,
+      body: `Заметил две похожие подписки: **${duplicates.a}** и **${duplicates.b}**. Может, одну из них отключить?`,
       ts: now,
       actions: [
         { label: 'Показать подписки', action: { kind: 'open_subscriptions' } },
-        { label: 'Игнорировать', action: { kind: 'snooze', hours: 168 } } // week
+        { label: 'Всё нормально', action: { kind: 'snooze', hours: 168 } }
       ],
       priority: 4,
     });
   }
 
+  // If no data-driven tips, return fallback tips
+  if (tips.length === 0) {
+    return getFallbackTips().slice(0, 2);
+  }
+
   // Sort by priority and return top tips
-  return tips.sort((a, b) => b.priority - a.priority).slice(0, 5);
+  return tips.sort((a, b) => b.priority - a.priority).slice(0, 3);
 }
