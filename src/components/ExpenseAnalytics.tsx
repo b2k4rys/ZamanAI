@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { ShoppingCart, Car, Home, Tv, Heart, BookOpen, Activity, Package } from "lucide-react";
-import { CategoryBreakdown } from "@/types/transaction";
+import { CategoryBreakdown, Category, Transaction } from "@/types/transaction";
+import { CategoryDetailsDrawer } from "./CategoryDetailsDrawer";
 
 const categoryIcons: Record<string, any> = {
   'Еда': ShoppingCart,
@@ -17,9 +19,17 @@ const categoryIcons: Record<string, any> = {
 interface ExpenseAnalyticsProps {
   categories: CategoryBreakdown[];
   totalSpend: number;
+  transactions?: Transaction[];
 }
 
-export const ExpenseAnalytics = ({ categories, totalSpend }: ExpenseAnalyticsProps) => {
+export const ExpenseAnalytics = ({ categories, totalSpend, transactions = [] }: ExpenseAnalyticsProps) => {
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  const handleCategoryClick = (category: Category) => {
+    setSelectedCategory(category);
+    setDrawerOpen(true);
+  };
   return (
     <Card className="p-6 space-y-6">
       <div className="flex items-center justify-between">
@@ -36,14 +46,20 @@ export const ExpenseAnalytics = ({ categories, totalSpend }: ExpenseAnalyticsPro
           const trendUp = category.trend && category.trend > 0;
           
           return (
-            <div key={category.category} className="space-y-2">
-              <div className="flex items-center justify-between">
+            <div 
+              key={category.category} 
+              className="space-y-2 cursor-pointer group"
+              onClick={() => handleCategoryClick(category.category as Category)}
+            >
+              <div className="flex items-center justify-between group-hover:bg-accent/50 -mx-2 px-2 py-1 rounded-lg transition-colors">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
                     <Icon className="h-4 w-4 text-primary" />
                   </div>
                   <div>
-                    <p className="font-medium text-foreground">{category.category}</p>
+                    <p className="font-medium text-foreground group-hover:text-primary transition-colors">
+                      {category.category}
+                    </p>
                     <p className="text-xs text-muted-foreground">
                       {category.percentage.toFixed(1)}% от бюджета
                       {hasTrend && (
@@ -63,6 +79,14 @@ export const ExpenseAnalytics = ({ categories, totalSpend }: ExpenseAnalyticsPro
           );
         })}
       </div>
+
+      <CategoryDetailsDrawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        category={selectedCategory}
+        transactions={transactions}
+        icon={selectedCategory ? categoryIcons[selectedCategory] : undefined}
+      />
 
       <div className="pt-4 border-t border-border">
         <p className="text-sm text-muted-foreground italic">

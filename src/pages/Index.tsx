@@ -116,6 +116,7 @@ const Index = () => {
                   topMerchants={analytics.topMerchants}
                   categoryBreakdown={analytics.categoryBreakdown}
                   insights={analytics.insights}
+                  transactions={activeCustomer.txns}
                   activeAnalyticsTab={activeAnalyticsTab}
                   onAnalyticsTabChange={setActiveAnalyticsTab}
                 />

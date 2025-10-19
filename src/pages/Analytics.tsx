@@ -5,6 +5,7 @@ import { SubscriptionsList } from "@/components/SubscriptionsList";
 import { InsightsFeed } from "@/components/InsightsFeed";
 import { TransactionManager } from "@/components/TransactionManager";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Transaction } from "@/types/transaction";
 
 interface AnalyticsProps {
   kpi: any;
@@ -12,6 +13,7 @@ interface AnalyticsProps {
   topMerchants: any[];
   categoryBreakdown: any[];
   insights: any[];
+  transactions?: Transaction[];
   activeAnalyticsTab?: string;
   onAnalyticsTabChange?: (tab: string) => void;
 }
@@ -22,6 +24,7 @@ export const Analytics = ({
   topMerchants,
   categoryBreakdown,
   insights,
+  transactions = [],
   activeAnalyticsTab = "expenses",
   onAnalyticsTabChange,
 }: AnalyticsProps) => {
@@ -55,7 +58,8 @@ export const Analytics = ({
           <div className="space-y-6">
             <ExpenseAnalytics 
               categories={categoryBreakdown} 
-              totalSpend={kpi.totalSpend} 
+              totalSpend={kpi.totalSpend}
+              transactions={transactions}
             />
             <InsightsFeed insights={insights} />
           </div>
