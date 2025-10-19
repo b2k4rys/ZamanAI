@@ -17,6 +17,56 @@ export const Challenges = () => {
   const [bankDialogOpen, setBankDialogOpen] = useState(false);
   const [templates] = useState(() => getChallengeBank());
 
+  // Migrate existing challenges to add icons
+  useEffect(() => {
+    const bank = getChallengeBank();
+    const byTplId = Object.fromEntries(bank.map((t) => [t.id, t]));
+    
+    const inferIcon = (title?: string, place?: string): string | undefined => {
+      const text = `${title || ''} ${place || ''}`.toLowerCase();
+      const icons: Record<string, string> = {
+        "такси": "🚕",
+        "еда": "🍔",
+        "доставка": "🍱",
+        "кофе": "☕",
+        "подписк": "📺",
+        "развлеч": "🎉",
+        "прогулк": "🚶",
+        "продукт": "🛒",
+        "шопинг": "🛍️",
+        "транспорт": "🚌",
+        "вне дома": "🍽️",
+        "рестор": "🍽️",
+      };
+      
+      for (const [key, icon] of Object.entries(icons)) {
+        if (text.includes(key)) return icon;
+      }
+      return undefined;
+    };
+
+    let migrated = false;
+    const updated = challenges.map((c) => {
+      if (c.icon) return c;
+      const tpl = c.templateId ? byTplId[c.templateId] : null;
+      const icon = tpl?.icon || inferIcon(c.title, c.scope.kind === 'category' ? c.scope.value : undefined);
+      if (icon) {
+        migrated = true;
+        return { ...c, icon };
+      }
+      return c;
+    });
+
+    if (migrated) {
+      localStorage.setItem('zaman.challenges.v2', JSON.stringify(updated));
+      window.dispatchEvent(new CustomEvent('challenges:updated'));
+      toast({
+        title: "Иконки челленджей обновлены ✨",
+        description: "Все карточки теперь с иконками",
+      });
+    }
+  }, []); // Run once on mount
+
   // Run auto check-ins on mount and when transactions change
   useEffect(() => {
     const results = runAutoCheckins();
@@ -64,6 +114,30 @@ export const Challenges = () => {
       });
     }
 
+    // Helper to infer icon if template doesn't have one
+    const inferIcon = (title?: string, place?: string): string | undefined => {
+      const text = `${title || ''} ${place || ''}`.toLowerCase();
+      const icons: Record<string, string> = {
+        "такси": "🚕",
+        "еда": "🍔",
+        "доставка": "🍱",
+        "кофе": "☕",
+        "подписк": "📺",
+        "развлеч": "🎉",
+        "прогулк": "🚶",
+        "продукт": "🛒",
+        "шопинг": "🛍️",
+        "транспорт": "🚌",
+        "вне дома": "🍽️",
+        "рестор": "🍽️",
+      };
+      
+      for (const [key, icon] of Object.entries(icons)) {
+        if (text.includes(key)) return icon;
+      }
+      return undefined;
+    };
+
     // Create challenges from templates
     selectedTemplates.forEach(template => {
       const startDate = new Date().toISOString().split('T')[0];
@@ -83,6 +157,7 @@ export const Challenges = () => {
         baseline: template.targetAmount * 1.5,
         status: 'active',
         hacks: [],
+        icon: template.icon || inferIcon(template.title, template.place),
       });
     });
 

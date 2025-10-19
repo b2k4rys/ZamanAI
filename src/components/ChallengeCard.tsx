@@ -68,10 +68,15 @@ export const ChallengeCard = ({
       
       <div className="grid grid-rows-[auto_auto_auto_1fr_auto] gap-2.5 p-4 sm:p-5 h-full">
         {/* Header */}
-        <header className="grid grid-cols-[1fr_auto] gap-3 items-start">
+        <header className="grid grid-cols-[auto_1fr_auto] gap-3 items-start">
+          {challenge.icon && (
+            <div className="flex-shrink-0 w-10 h-10 rounded-full bg-[#E9F6F2] flex items-center justify-center text-[24px]">
+              {challenge.icon}
+            </div>
+          )}
           <div className="min-w-0">
             <div className="flex items-center gap-2 mb-1">
-              <Zap className="h-4 w-4 text-primary flex-shrink-0" />
+              {!challenge.icon && <Zap className="h-4 w-4 text-primary flex-shrink-0" />}
               <h3 
                 className="font-semibold text-[18px] leading-snug text-foreground break-words"
                 style={{ hyphens: 'auto', wordBreak: 'normal', lineHeight: '1.2' }}

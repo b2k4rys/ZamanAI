@@ -60,6 +60,7 @@ export type Challenge = {
   currentStreak: number;
   bestStreak: number;
   weekView: WeekView;
+  icon?: string;
 };
 
 // Legacy type for backwards compatibility
