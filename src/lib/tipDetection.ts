@@ -85,23 +85,24 @@ export function generateSmartTips(
 ): Tip[] {
   const tips: Tip[] = [];
   const now = new Date().toISOString();
+  const today = new Date();
 
   // 1. Upcoming bills
   const bills = detectRecurringBills(txns);
   bills.forEach(bill => {
-    const daysUntil = differenceInDays(new Date(bill.nextDate), new Date());
-    if (daysUntil === 1) {
+    const daysUntil = differenceInDays(new Date(bill.nextDate), today);
+    if (daysUntil <= 1 && daysUntil >= 0) {
       tips.push({
         id: `tip_bill_${bill.merchant}_${bill.nextDate}`,
         type: 'bill_upcoming',
-        title: `Завтра списание за ${bill.merchant}`,
-        body: `Завтра списание за ${bill.merchant} **${bill.amount.toLocaleString()} ₸**. Переведу заранее, чтобы не забыть?`,
+        title: daysUntil === 0 ? `Сегодня списание за ${bill.merchant}` : `Завтра списание за ${bill.merchant}`,
+        body: `${daysUntil === 0 ? 'Сегодня' : 'Завтра'} списание за **${bill.merchant}** на **${bill.amount.toLocaleString('ru-KZ')} ₸**. Переведу заранее?`,
         ts: now,
         actions: [
           { label: 'Оплатить', action: { kind: 'pay_bill', merchant: bill.merchant, amount: bill.amount } },
           { label: 'Напомнить завтра', action: { kind: 'snooze', hours: 24 } }
         ],
-        priority: 8,
+        priority: 9,
       });
     }
   });
@@ -113,36 +114,36 @@ export function generateSmartTips(
 
   if (daysToSalary > 0 && balance > 0) {
     const dailyBudget = balance / daysToSalary;
-    if (dailyBudget < avgDaily * 0.8) {
+    if (dailyBudget < avgDaily * 0.7) {
       tips.push({
-        id: `tip_lowbal_${new Date().toISOString().split('T')[0]}`,
+        id: `tip_lowbal_${today.toISOString().split('T')[0]}`,
         type: 'low_balance',
-        title: `Остаток ${balance.toLocaleString()} ₸ на ${daysToSalary} дн`,
-        body: `Осталось **${balance.toLocaleString()} ₸**, впереди **${daysToSalary} дней**. Распределим по дням?`,
+        title: `Остаток ${balance.toLocaleString('ru-KZ')} ₸ на ${daysToSalary} дн`,
+        body: `Осталось **${balance.toLocaleString('ru-KZ')} ₸** на **${daysToSalary} дней**. Средний дневной бюджет: **${Math.round(dailyBudget).toLocaleString('ru-KZ')} ₸** (обычно тратите ${Math.round(avgDaily).toLocaleString('ru-KZ')} ₸). Распределим?`,
         ts: now,
         actions: [
           { label: 'Распределить бюджет', action: { kind: 'open_budget_planner' } },
           { label: 'Позже', action: { kind: 'snooze', hours: 24 } }
         ],
-        priority: 9,
+        priority: 8,
       });
     }
   }
 
   // 3. Category overspend
-  const categories = ['Еда', 'Транспорт', 'Развлечения', 'Покупки'];
+  const categories = ['Еда', 'Транспорт', 'Развлечения', 'Покупки', 'Подписки'];
   categories.forEach(cat => {
-    const delta = detectCategoryOverspend(txns, cat, 10);
+    const delta = detectCategoryOverspend(txns, cat, 15);
     if (delta > 0) {
       tips.push({
-        id: `tip_overspend_${cat}_${new Date().toISOString().split('T')[0]}`,
+        id: `tip_overspend_${cat}_${today.toISOString().split('T')[0]}`,
         type: 'overspend',
-        title: `${cat} выросли на ${delta.toFixed(0)}%`,
-        body: `Категория **${cat}** выросла на **${delta.toFixed(0)}%**. Хочешь лимит или челлендж?`,
+        title: `${cat}: рост на ${delta.toFixed(0)}%`,
+        body: `Категория **${cat}** выросла на **${delta.toFixed(0)}%** относительно прошлого месяца. Хочешь установить лимит или создать челлендж для контроля?`,
         ts: now,
         actions: [
-          { label: 'Поставить лимит', action: { kind: 'set_limit', category: cat, monthly: 50000 } },
-          { label: 'Создать челлендж', action: { kind: 'create_challenge', scope: { kind: 'category', value: cat } } }
+          { label: 'Создать челлендж', action: { kind: 'create_challenge', scope: { kind: 'category', value: cat } } },
+          { label: 'Позже', action: { kind: 'snooze', hours: 48 } }
         ],
         priority: 6,
       });
@@ -151,41 +152,50 @@ export function generateSmartTips(
 
   // 4. Saving opportunity
   const freeCash = calculateFreeCash(txns, goals);
-  if (freeCash > 50000) {
+  if (freeCash > 30000) {
     tips.push({
-      id: `tip_saving_${new Date().toISOString().split('T')[0]}`,
+      id: `tip_saving_${today.toISOString().split('T')[0]}`,
       type: 'saving_opportunity',
-      title: `Свободно ~${freeCash.toLocaleString()} ₸`,
-      body: `Лежит свободно ~**${freeCash.toLocaleString()} ₸**. Переведём на халяль-депозит под 15%?`,
+      title: `Свободно ~${Math.round(freeCash).toLocaleString('ru-KZ')} ₸`,
+      body: `Лежит свободно примерно **${Math.round(freeCash).toLocaleString('ru-KZ')} ₸**. Можем перевести часть на халяль-депозит под 15% годовых?`,
       ts: now,
       actions: [
-        { label: 'Перевести на депозит', action: { kind: 'open_budget_planner' } },
-        { label: 'Позже', action: { kind: 'snooze', hours: 48 } }
+        { label: 'Посмотреть продукты', action: { kind: 'open_budget_planner' } },
+        { label: 'Позже', action: { kind: 'snooze', hours: 72 } }
       ],
       priority: 5,
     });
   }
 
   // 5. Goal nudge
-  goals.forEach(goal => {
-    if (goal.status && goal.status !== 'active') return;
-    const progress = ((Number(goal.savedAmount) || 0) / (Number(goal.targetAmount) || 1)) * 100;
-    const monthlyTarget = (Number(goal.targetAmount) || 0) / 12;
-    const missing = monthlyTarget * 0.5 - (Number(goal.savedAmount) || 0);
+  const activeGoals = goals.filter(g => !g.status || g.status === 'active');
+  activeGoals.forEach(goal => {
+    const saved = Number(goal.savedAmount) || 0;
+    const target = Number(goal.targetAmount) || 0;
+    const progress = (saved / target) * 100;
+    const monthlyPlan = Number(goal.monthlyPlan) || 0;
     
-    if (progress < 50 && missing > 0) {
+    // Calculate how much is missing this month
+    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    const monthlyContributions = (goal.history || [])
+      .filter(h => new Date(h.date) >= monthStart)
+      .reduce((sum, h) => sum + (h.amount || 0), 0);
+    
+    const missing = monthlyPlan - monthlyContributions;
+    
+    if (progress < 80 && missing > 1000) {
       const suggested = Math.round(missing);
       tips.push({
-        id: `tip_goal_${goal.id}_${new Date().toISOString().split('T')[0]}`,
+        id: `tip_goal_${goal.id}_${today.toISOString().split('T')[0]}`,
         type: 'goal_nudge',
         title: `До цели "${goal.name}" не хватает`,
-        body: `До цели **«${goal.name}»** в этом месяце не доложили **${suggested.toLocaleString()} ₸**. Пополнить сейчас?`,
+        body: `До цели **«${goal.name}»** в этом месяце не доложено **${suggested.toLocaleString('ru-KZ')} ₸** (план: ${monthlyPlan.toLocaleString('ru-KZ')} ₸/мес). Пополнить сейчас?`,
         ts: now,
         actions: [
           { label: 'Пополнить цель', action: { kind: 'transfer_to_goal', goalId: goal.id, amount: suggested } },
           { label: 'Позже', action: { kind: 'snooze', hours: 48 } }
         ],
-        priority: 5,
+        priority: 7,
       });
     }
   });
@@ -193,22 +203,25 @@ export function generateSmartTips(
   // 6. Challenge check-in
   const activeChallenges = challenges.filter(c => c.status === 'active');
   activeChallenges.forEach(challenge => {
-    const todayCheckin = challenge.checkins.find(c => 
-      isSameDay(new Date(c.date), new Date())
-    );
+    const todayCheckin = challenge.checkins.find(c => {
+      const checkinDate = new Date(c.date);
+      return checkinDate.getFullYear() === today.getFullYear() &&
+             checkinDate.getMonth() === today.getMonth() &&
+             checkinDate.getDate() === today.getDate();
+    });
 
     if (!todayCheckin) {
       tips.push({
-        id: `tip_challenge_${challenge.id}_${new Date().toISOString().split('T')[0]}`,
+        id: `tip_challenge_${challenge.id}_${today.toISOString().split('T')[0]}`,
         type: 'challenge_checkin',
         title: `Чек-ин по "${challenge.title}"`,
-        body: `Сегодня чек-ин по челленджу **«${challenge.title}»**. Отметим?`,
+        body: `Сегодня чек-ин по челленджу **«${challenge.title}»**. Уже справились с задачей? Отметим! 🌿`,
         ts: now,
         actions: [
-          { label: 'Засчитать', action: { kind: 'open_budget_planner' } }, // Will be handled separately
-          { label: 'Позже', action: { kind: 'snooze', hours: 12 } }
+          { label: 'Засчитать чек-ин', action: { kind: 'open_budget_planner' } },
+          { label: 'Напомнить вечером', action: { kind: 'snooze', hours: 6 } }
         ],
-        priority: 6,
+        priority: 7,
       });
     }
   });
@@ -217,10 +230,10 @@ export function generateSmartTips(
   const duplicates = detectDuplicateSubs(txns);
   if (duplicates) {
     tips.push({
-      id: `tip_dupsubs_${new Date().toISOString().split('T')[0]}`,
+      id: `tip_dupsubs_${today.toISOString().split('T')[0]}`,
       type: 'duplicate_subs',
-      title: `Две похожие подписки`,
-      body: `Две похожие подписки: **${duplicates.a}** и **${duplicates.b}**. Одну отключим?`,
+      title: `Похожие подписки`,
+      body: `Замечены две похожие подписки: **${duplicates.a}** и **${duplicates.b}**. Может, одну из них отключить?`,
       ts: now,
       actions: [
         { label: 'Показать подписки', action: { kind: 'open_subscriptions' } },
@@ -230,6 +243,6 @@ export function generateSmartTips(
     });
   }
 
-  // Sort by priority
-  return tips.sort((a, b) => b.priority - a.priority);
+  // Sort by priority and return top tips
+  return tips.sort((a, b) => b.priority - a.priority).slice(0, 5);
 }

@@ -267,6 +267,14 @@ export const ChatAssistant = ({
       return;
     }
     
+    // Intro message
+    const introMsg: TextMessage = {
+      id: `tips-intro-${Date.now()}`,
+      role: 'assistant',
+      kind: 'text',
+      content: `Проанализировал ваши транзакции, цели и челленджи. Вот что я заметил:`,
+    };
+    
     // Show top 3 tips
     const tipsToShow = newTips.slice(0, 3);
     const tipMessages: TipMessage[] = tipsToShow.map(tip => ({
@@ -276,7 +284,10 @@ export const ChatAssistant = ({
       tip,
     }));
     
-    setMessages(prev => [...prev, ...tipMessages]);
+    setMessages(prev => [...prev, introMsg, ...tipMessages]);
+    
+    // Mark tips as shown
+    tipsToShow.forEach(tip => markShown(tip.id));
     
     toast({
       title: "Советы готовы",
@@ -810,6 +821,20 @@ ACTIVE_CUSTOMER_SNAPSHOT:${JSON.stringify(snapshot)}`;
                     </Button>
                   </div>
                 </Card>
+              </div>
+            );
+          }
+
+          // Tip message
+          if (message.kind === "tip") {
+            return (
+              <div key={message.id} className="flex justify-start fade-in">
+                <div className="max-w-[85%]">
+                  <TipMessage 
+                    tip={message.tip} 
+                    onActionClick={(action) => handleTipAction(message.tip, action)} 
+                  />
+                </div>
               </div>
             );
           }
