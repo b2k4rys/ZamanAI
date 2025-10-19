@@ -55,7 +55,11 @@ export type ActionCommand =
   | { type: 'set_limit'; merchant: string; monthly: number }
   | { type: 'create_challenge'; scope: any; durationDays: 7 | 14 | 30; target: any; hacks: any[] }
   | { type: 'open_challenges' }
-  | { type: 'checkin'; challengeId: string };
+  | { type: 'checkin'; challengeId: string; note?: string; saved?: number }
+  | { type: 'pay_bill'; merchant: string; amount: number }
+  | { type: 'transfer_to_goal'; goalId: string; amount: number }
+  | { type: 'open_budget_planner' }
+  | { type: 'open_challenge_checkin'; challengeId: string };
 
 export function parseAction(text: string): ActionCommand | null {
   const actionMarker = '@@ACTION';

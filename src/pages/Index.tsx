@@ -122,7 +122,8 @@ const Index = () => {
               <TabsContent value="assistant" className="mt-6 space-y-8">
                 <div className="relative">
                   <ChatAssistant 
-                    goals={goals} 
+                    goals={goals}
+                    challenges={[]} // TODO: Pass actual challenges from context
                     onContribute={handleContribute}
                     onCreateGoal={handleCreateGoal}
                     onShowExpenseBreakdown={handleShowExpenseBreakdown}

@@ -1,17 +1,20 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Mic, Send, Sparkles, Wallet, Trash2, Maximize2, Minimize2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Goal } from "@/types/goal";
+import { Challenge } from "@/types/challenge";
 import { SalaryEvent, SalaryRule } from "@/types/salary";
 import { GoalAllocationDialog } from "./GoalAllocationDialog";
 import { AssistantMessage } from "./AssistantMessage";
+import { ReminderMessage } from "./ReminderMessage";
 import { useCustomer } from "@/contexts/CustomerContext";
 import { buildSnapshot, parseAction, type ActionCommand } from "@/lib/customerSnapshot";
 import { callGemini } from "@/lib/geminiApi";
 import { toast } from "@/hooks/use-toast";
+import { useSmartReminders } from "@/hooks/useSmartReminders";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -45,6 +48,7 @@ type Message = TextMessage | SalarySuggestionMessage;
 
 interface ChatAssistantProps {
   goals: Goal[];
+  challenges: Challenge[];
   onContribute: (goalId: string, amount: number, date: string) => void;
   onCreateGoal?: (title: string, target: number, deadline?: string) => void;
   onShowExpenseBreakdown?: (category?: string, merchant?: string) => void;
@@ -54,7 +58,8 @@ interface ChatAssistantProps {
 }
 
 export const ChatAssistant = ({ 
-  goals, 
+  goals,
+  challenges,
   onContribute, 
   onCreateGoal, 
   onShowExpenseBreakdown,
@@ -63,6 +68,15 @@ export const ChatAssistant = ({
   onShowChallenges
 }: ChatAssistantProps) => {
   const { activeCustomer, addTransaction } = useCustomer();
+  
+  // Smart reminders
+  const {
+    topReminder,
+    dismissReminder,
+    snoozeReminder,
+    completeReminder,
+    refresh: refreshReminders,
+  } = useSmartReminders(activeCustomer.txns, goals, challenges);
   
   // Chat size management
   const [chatSize, setChatSize] = useChatStorage('zaman.chat.size', DEFAULT_CHAT_SIZE);
@@ -152,18 +166,29 @@ export const ChatAssistant = ({
     }
   }, [activeCustomer.id]);
 
-  // Keyboard shortcuts
-  React.useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-        e.preventDefault();
-        setIsClearDialogOpen(true);
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
+  // Refresh reminders on mount
+  useEffect(() => {
+    refreshReminders();
   }, []);
+
+  // Inject reminder into chat if available
+  useEffect(() => {
+    if (topReminder && topReminder.state === 'new') {
+      const reminderMsg: TextMessage = {
+        id: `reminder-${topReminder.id}`,
+        role: "assistant",
+        kind: "text",
+        content: topReminder.body,
+      };
+      setMessages(prev => {
+        const hasReminder = prev.some(m => m.id === reminderMsg.id);
+        if (!hasReminder) {
+          return [...prev, reminderMsg];
+        }
+        return prev;
+      });
+    }
+  }, [topReminder]);
 
   // Anti-spam protection for Salary Insight
   const COOLDOWN_MS = 10 * 60 * 1000; // 10 minutes
@@ -332,7 +357,59 @@ export const ChatAssistant = ({
       case 'checkin': {
         toast({
           title: "Чек-ин выполнен",
-          description: "Отличная работа! Продолжайте в том же духе 💪",
+          description: action.note ? action.note : "Отличная работа! Продолжайте в том же духе 💪",
+        });
+        // TODO: Link with useChallenges hook
+        break;
+      }
+      case 'pay_bill': {
+        toast({
+          title: "Платёж выполнен",
+          description: `${action.merchant}: ${formatAmount(action.amount)} ₸`,
+        });
+        // Add expense transaction
+        addTransaction({
+          date: new Date().toISOString(),
+          amount: -action.amount,
+          rawMerchant: action.merchant,
+          note: 'Оплата по напоминанию',
+        });
+        break;
+      }
+      case 'transfer_to_goal': {
+        const goal = goals.find(g => g.id === action.goalId);
+        if (goal) {
+          onContribute(action.goalId, action.amount, new Date().toISOString());
+          addTransaction({
+            date: new Date().toISOString(),
+            amount: -action.amount,
+            rawMerchant: `Накопление: ${goal.title}`,
+            note: 'Перевод по напоминанию',
+          });
+          const confirmMsg: TextMessage = {
+            id: `action-confirm-${Date.now()}`,
+            role: "assistant",
+            kind: "text",
+            content: `✅ Переведено ${formatAmount(action.amount)} ₸ на цель «${goal.title}»`,
+          };
+          setMessages((prev) => [...prev, confirmMsg]);
+        }
+        break;
+      }
+      case 'open_budget_planner': {
+        toast({
+          title: "Планировщик бюджета",
+          description: "Функция в разработке",
+        });
+        break;
+      }
+      case 'open_challenge_checkin': {
+        if (onShowChallenges) {
+          onShowChallenges();
+        }
+        toast({
+          title: "Открываю челлендж",
+          description: "Отметьте чек-ин прямо в челленджах",
         });
         break;
       }
