@@ -976,13 +976,13 @@ ACTIVE_CUSTOMER_SNAPSHOT:${JSON.stringify(snapshot)}`;
             Советы от ассистента
           </Button>
           <Button
-            onClick={handleRecommendProducts}
+            onClick={handleSimulateSalary}
             size="sm"
             variant="outline"
             className="flex-1 gap-2 hover:bg-accent"
           >
             <Wallet className="h-4 w-4" />
-            💼 Рекомендуй продукт
+            Симулировать зарплату
           </Button>
         </div>
       </div>
