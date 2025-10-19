@@ -134,6 +134,7 @@ export const ChatAssistant = ({
   const [messages, setMessages] = useState<Message[]>(loadMessages());
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
   const [allocationDialog, setAllocationDialog] = useState<{
     open: boolean;
     amount: number;
@@ -410,6 +411,27 @@ export const ChatAssistant = ({
         return withoutTyping;
       });
     }, 800); // Typing delay
+  };
+  
+  const handleVoiceRecording = async () => {
+    const voiceCommand = "Сделай анализ по моим расходам";
+    setIsRecording(true);
+    setInput("");
+    
+    // Simulate voice recording with typing animation
+    for (let i = 0; i <= voiceCommand.length; i++) {
+      await new Promise(resolve => setTimeout(resolve, 80)); // 80ms per character
+      setInput(voiceCommand.substring(0, i));
+    }
+    
+    setIsRecording(false);
+    
+    // Auto-send after typing animation completes
+    setTimeout(() => {
+      if (!loading) {
+        handleSend();
+      }
+    }, 300);
   };
   
   const handleTipAction = (tip: Tip, action: Tip['actions'][0]) => {
@@ -1136,29 +1158,24 @@ ACTIVE_CUSTOMER_SNAPSHOT:${JSON.stringify(snapshot)}`;
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyPress={(e) => e.key === "Enter" && !loading && handleSend()}
-            placeholder="Напишите ваш вопрос..."
-            className="flex-1 border-primary/20 focus:border-primary"
-            disabled={loading}
+            onKeyPress={(e) => e.key === "Enter" && !loading && !isRecording && handleSend()}
+            placeholder={isRecording ? "🎤 Идет запись..." : "Напишите ваш вопрос..."}
+            className={`flex-1 border-primary/20 focus:border-primary transition-all ${
+              isRecording ? 'bg-red-500/5 border-red-500/30' : ''
+            }`}
+            disabled={loading || isRecording}
           />
           <Button
             size="icon"
             variant="outline"
-            className="hover:bg-accent border-primary/20"
-            title="Голосовой ввод"
-            onClick={() => {
-              const voiceCommand = "Сделай анализ по моим расходам";
-              setInput(voiceCommand);
-              // Trigger send after a short delay to ensure state is updated
-              setTimeout(() => {
-                if (!loading) {
-                  handleSend();
-                }
-              }, 100);
-            }}
-            disabled={loading}
+            className={`hover:bg-accent border-primary/20 transition-all ${
+              isRecording ? 'bg-red-500/10 border-red-500 animate-pulse' : ''
+            }`}
+            title={isRecording ? "Запись..." : "Голосовой ввод"}
+            onClick={handleVoiceRecording}
+            disabled={loading || isRecording}
           >
-            <Mic className="h-4 w-4" />
+            <Mic className={`h-4 w-4 ${isRecording ? 'text-red-500' : ''}`} />
           </Button>
           <Button 
             onClick={handleSend} 
