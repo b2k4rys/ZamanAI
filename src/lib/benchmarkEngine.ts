@@ -31,6 +31,16 @@ export interface ComparisonResult {
 
 const PROFILE_KEY = 'zaman.profile.v1';
 const BENCHMARK_KEY = 'zaman.benchmark.v1';
+const DEMO_SPEND_KEY = 'zaman.demo.spend.v1';
+
+// Demo user spending (fallback)
+const DEMO_USER_SPEND = {
+  'Еда': 91000,
+  'Транспорт': 48000,
+  'Подписки': 15000,
+  'Развлечения': 32000,
+  'Покупки': 45000,
+};
 
 // Default benchmark data (hardcoded fallback)
 const DEFAULT_BENCHMARK: BenchmarkData = {
@@ -109,6 +119,29 @@ export function saveUserProfile(profile: UserProfile): void {
 }
 
 /**
+ * Get demo user spend
+ */
+export function getDemoUserSpend(): Record<string, number> {
+  try {
+    const stored = localStorage.getItem(DEMO_SPEND_KEY);
+    if (stored) {
+      return JSON.parse(stored);
+    }
+  } catch (e) {
+    console.error('Failed to load demo spend:', e);
+  }
+  
+  // Save demo to localStorage
+  try {
+    localStorage.setItem(DEMO_SPEND_KEY, JSON.stringify(DEMO_USER_SPEND));
+  } catch (e) {
+    console.error('Failed to save demo spend:', e);
+  }
+  
+  return DEMO_USER_SPEND;
+}
+
+/**
  * Get benchmark data from localStorage or use default
  */
 export function getBenchmarkData(): BenchmarkData {
@@ -133,6 +166,7 @@ export function getBenchmarkData(): BenchmarkData {
 
 /**
  * Calculate monthly spend by category for the current month
+ * If no transactions, returns demo spend
  */
 export function getUserMonthlySpend(txns: Transaction[], month?: Date): Record<string, number> {
   const targetMonth = month || new Date();
@@ -152,6 +186,12 @@ export function getUserMonthlySpend(txns: Transaction[], month?: Date): Record<s
     const cat = t.category || 'Другое';
     spendByCategory[cat] = (spendByCategory[cat] || 0) + Math.abs(t.amount);
   });
+  
+  // If no spending data, use demo
+  const hasData = Object.keys(spendByCategory).length > 0;
+  if (!hasData) {
+    return getDemoUserSpend();
+  }
   
   return spendByCategory;
 }

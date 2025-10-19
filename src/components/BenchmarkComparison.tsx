@@ -26,13 +26,16 @@ export function BenchmarkComparison() {
   const [selectedCity, setSelectedCity] = useState<string>("");
 
   useEffect(() => {
-    const loadedProfile = getUserProfile();
-    if (loadedProfile) {
-      setProfile(loadedProfile);
-      loadComparison(loadedProfile);
-    } else {
-      setShowProfileDialog(true);
+    let loadedProfile = getUserProfile();
+    
+    // If no profile, create default demo profile
+    if (!loadedProfile) {
+      loadedProfile = { ageBand: '25–34', city: 'Almaty' };
+      saveUserProfile(loadedProfile);
     }
+    
+    setProfile(loadedProfile);
+    loadComparison(loadedProfile);
   }, [activeCustomer.id]);
 
   const loadComparison = (userProfile: UserProfile) => {
@@ -74,7 +77,7 @@ export function BenchmarkComparison() {
       return (
         <Badge variant="outline" className="gap-1 bg-emerald-500/10 text-emerald-700 border-emerald-500/30">
           <TrendingDown className="h-3 w-3" />
-          Ниже среднего {result.deltaPct}%
+          Ниже среднего {Math.abs(result.deltaPct)}%
         </Badge>
       );
     }
@@ -89,7 +92,7 @@ export function BenchmarkComparison() {
     return (
       <Badge variant="outline" className="gap-1 bg-blue-500/10 text-blue-700 border-blue-500/30">
         <Minus className="h-3 w-3" />
-        Близко к среднему
+        Около среднего {result.deltaPct > 0 ? '+' : ''}{result.deltaPct}%
       </Badge>
     );
   };
@@ -127,16 +130,6 @@ export function BenchmarkComparison() {
         </div>
       </Card>
 
-      {/* Empty state */}
-      {comparison.length === 0 && (
-        <Card className="p-12 text-center">
-          <Target className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-xl font-semibold mb-2">Данных за период нет</h3>
-          <p className="text-muted-foreground">
-            Добавьте транзакции за текущий месяц, чтобы увидеть сравнение
-          </p>
-        </Card>
-      )}
 
       {/* Comparison cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -172,9 +165,9 @@ export function BenchmarkComparison() {
               {result.verdict === 'above' && (
                 <div className="pt-2 border-t border-border/50">
                   <p className="text-xs text-muted-foreground mb-2">
-                    💡 Совет: Попробуйте создать челлендж для этой категории
+                    💡 Хочешь поставить лимит или создать челлендж?
                   </p>
-                  <Button size="sm" variant="outline" className="w-full">
+                  <Button size="sm" variant="outline" className="w-full text-xs">
                     Создать челлендж
                   </Button>
                 </div>
@@ -183,7 +176,15 @@ export function BenchmarkComparison() {
               {result.verdict === 'below' && result.userSpend > 0 && (
                 <div className="pt-2 border-t border-border/50">
                   <p className="text-xs text-emerald-700">
-                    ✨ Отличная работа! Продолжайте в том же духе
+                    ✨ Отличный темп! Продолжим экономию 🌿
+                  </p>
+                </div>
+              )}
+              
+              {result.verdict === 'near' && (
+                <div className="pt-2 border-t border-border/50">
+                  <p className="text-xs text-muted-foreground">
+                    📊 В пределах нормы для вашей группы
                   </p>
                 </div>
               )}
