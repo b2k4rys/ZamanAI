@@ -57,7 +57,7 @@ export const ChallengeCard = ({
   };
 
   return (
-    <Card className="rounded-xl border border-border/50 bg-card shadow-sm hover:shadow-md transition-shadow duration-200 relative overflow-hidden">
+    <Card className="rounded-xl border border-border/50 bg-card shadow-sm hover:shadow-md transition-shadow duration-200 relative overflow-hidden min-w-[340px] h-full">
       {/* Auto check-in notification */}
       {hasAutoCheckinToday && (
         <div className="absolute top-3 right-3 z-10 text-xs bg-primary/10 text-primary px-2.5 py-1 rounded-full flex items-center gap-1 font-medium">
@@ -66,14 +66,14 @@ export const ChallengeCard = ({
         </div>
       )}
       
-      <div className="grid grid-rows-[auto_auto_auto_1fr_auto] gap-2.5 p-4 sm:p-5">
+      <div className="grid grid-rows-[auto_auto_auto_1fr_auto] gap-2.5 p-4 sm:p-5 h-full">
         {/* Header */}
         <header className="grid grid-cols-[1fr_auto] gap-3 items-start">
           <div className="min-w-0">
             <div className="flex items-center gap-2 mb-1">
               <Zap className="h-4 w-4 text-primary flex-shrink-0" />
               <h3 
-                className="font-semibold text-[18px] leading-snug text-foreground line-clamp-2 break-words"
+                className="font-semibold text-[18px] leading-snug text-foreground break-words"
                 style={{ hyphens: 'auto', wordBreak: 'normal', lineHeight: '1.2' }}
                 title={challenge.title}
               >
