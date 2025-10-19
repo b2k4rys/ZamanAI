@@ -13,7 +13,8 @@ import {
   isActive,
   buildWeekView,
   recomputeStreaks,
-  estimatedDailySaving
+  estimatedDailySaving,
+  autoCheckin
 } from "@/lib/challengeLogic";
 
 const STORAGE_KEY = "zaman.challenges.v2";
@@ -210,6 +211,62 @@ export function useChallenges(transactions: Transaction[]) {
     });
   };
 
+  // Daily auto check-in for all active challenges
+  const runAutoCheckins = (): Array<{ challengeId: string; message: string; saved: number }> => {
+    const results: Array<{ challengeId: string; message: string; saved: number }> = [];
+    
+    challenges.forEach(challenge => {
+      if (!isActive(challenge)) return;
+
+      const result = autoCheckin(challenge, transactions);
+      
+      if (result.success) {
+        // Successful day - do checkin
+        doCheckin(challenge.id, { saved: result.saved, auto: true });
+        results.push({ 
+          challengeId: challenge.id, 
+          message: result.message, 
+          saved: result.saved 
+        });
+      } else if (result.message) {
+        // Failed day with message (e.g., swear jar)
+        const todayISO = new Date().toISOString().split('T')[0];
+        const existingIdx = challenge.checkins.findIndex(c => c.date.startsWith(todayISO));
+        
+        if (existingIdx < 0) {
+          const swearJar = findHack(challenge.hacks, 'swear_jar');
+          const penalty = swearJar?.enabled ? swearJar.penalty : 0;
+          
+          const checkin: Checkin = {
+            date: new Date().toISOString(),
+            state: 'missed',
+            saved: 0,
+            auto: true,
+          };
+          
+          let newSaved = challenge.saved;
+          if (penalty > 0) {
+            newSaved += penalty;
+          }
+          
+          updateChallenge(challenge.id, {
+            checkins: [...challenge.checkins, checkin],
+            saved: newSaved,
+            weekView: buildWeekView({ ...challenge, checkins: [...challenge.checkins, checkin] }),
+          });
+          
+          results.push({ 
+            challengeId: challenge.id, 
+            message: result.message, 
+            saved: penalty 
+          });
+        }
+      }
+    });
+    
+    return results;
+  };
+
   return {
     challenges,
     createChallenge,
@@ -219,5 +276,6 @@ export function useChallenges(transactions: Transaction[]) {
     evaluateTransaction,
     performDailyCheckin,
     doCheckin,
+    runAutoCheckins,
   };
 }

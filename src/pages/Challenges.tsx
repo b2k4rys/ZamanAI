@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus, Zap } from "lucide-react";
 import { ChallengeCard } from "@/components/ChallengeCard";
@@ -7,11 +7,28 @@ import { useChallenges } from "@/hooks/useChallenges";
 import { useCustomer } from "@/contexts/CustomerContext";
 import { Card } from "@/components/ui/card";
 import { seedChallenges } from "@/data/seedChallenges";
+import { toast } from "@/hooks/use-toast";
 
 export const Challenges = () => {
   const { activeCustomer } = useCustomer();
-  const { challenges, updateChallenge, deleteChallenge, createChallenge, doCheckin } = useChallenges(activeCustomer.txns);
+  const { challenges, updateChallenge, deleteChallenge, createChallenge, runAutoCheckins } = useChallenges(activeCustomer.txns);
   const [selectedChallenge, setSelectedChallenge] = useState<Challenge | null>(null);
+
+  // Run auto check-ins on mount and when transactions change
+  useEffect(() => {
+    const results = runAutoCheckins();
+    
+    // Show notifications for each auto check-in
+    results.forEach((result, index) => {
+      setTimeout(() => {
+        toast({
+          title: result.saved > 0 ? "Чек-ин засчитан! 🌿" : "Обновление челленджа",
+          description: result.message,
+          duration: 5000,
+        });
+      }, index * 1000); // Stagger notifications
+    });
+  }, [activeCustomer.txns.length]); // Re-run when transactions change
 
   const handlePause = (id: string) => {
     updateChallenge(id, { status: 'paused' });
@@ -20,10 +37,6 @@ export const Challenges = () => {
   const handleViewDetails = (challenge: Challenge) => {
     setSelectedChallenge(challenge);
     // TODO: Open detail drawer
-  };
-
-  const handleCheckin = (id: string) => {
-    doCheckin(id);
   };
 
   const handleLoadSeed = () => {
@@ -87,7 +100,6 @@ export const Challenges = () => {
               onViewDetails={handleViewDetails}
               onPause={handlePause}
               onDelete={deleteChallenge}
-              onCheckin={handleCheckin}
             />
           ))}
         </div>

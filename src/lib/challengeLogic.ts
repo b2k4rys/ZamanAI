@@ -287,3 +287,48 @@ export function getWeekDayLabel(day: WeekDay): string {
   const labels = ['П', 'В', 'С', 'Ч', 'П', 'С', 'В'];
   return labels[day];
 }
+
+/**
+ * Auto check-in challenge based on today's transactions
+ * Returns { success: boolean, message?: string } for AI notification
+ */
+export function autoCheckin(
+  challenge: Challenge, 
+  transactions: Transaction[]
+): { success: boolean; message: string; saved: number } {
+  const today = new Date().toISOString().split('T')[0];
+  
+  // Check if already checked in today
+  const existingCheckin = challenge.checkins.find(c => c.date === today);
+  if (existingCheckin) {
+    return { success: false, message: '', saved: 0 };
+  }
+
+  // Get today's transactions matching challenge scope
+  const relevantTxns = transactions.filter(txn => {
+    if (!txn.date.startsWith(today)) return false;
+    if (txn.amount >= 0) return false; // only expenses
+    return matchesScope(txn, challenge.scope);
+  });
+
+  const dailySaving = estimatedDailySaving(challenge);
+
+  if (relevantTxns.length === 0) {
+    // Success! No violations today
+    const message = challenge.scope.kind === 'merchant'
+      ? `Отлично! Сегодня без ${challenge.scope.value} — +${dailySaving.toLocaleString()} ₸ в копилку 🌿`
+      : `Отлично! Сегодня категория ${challenge.scope.value} под контролем — +${dailySaving.toLocaleString()} ₸ 🌿`;
+    
+    return { success: true, message, saved: dailySaving };
+  } else {
+    // Violation detected
+    const swearJar = findHack(challenge.hacks, 'swear_jar');
+    const penalty = swearJar?.enabled ? swearJar.penalty : 0;
+    
+    const message = challenge.scope.kind === 'merchant'
+      ? `Сегодня был визит в ${challenge.scope.value}${penalty > 0 ? `, но не страшно — я зачёл штраф ${penalty.toLocaleString()} ₸ в копилку 💡` : ''}`
+      : `Сегодня были траты в категории ${challenge.scope.value}${penalty > 0 ? `, но зато штраф ${penalty.toLocaleString()} ₸ пошёл в копилку 💡` : ''}`;
+    
+    return { success: false, message, saved: 0 };
+  }
+}
