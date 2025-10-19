@@ -1,4 +1,5 @@
 import { Transaction } from "./transaction";
+import { Goal } from "./goal";
 
 export type ExpenseCategory = 
   | 'Еда'
@@ -18,15 +19,7 @@ export interface ExpenseRow {
   amount: number;
 }
 
-export interface CustomerGoal {
-  id: string;
-  name: string;
-  targetAmount: number;
-  savedAmount: number;
-  createdAt: string;
-  updatedAt: string;
-  icon?: string;
-}
+export type CustomerGoal = Goal;
 
 export interface Customer {
   id: string;
