@@ -1,18 +1,66 @@
-import { useMemo } from 'react';
-import type { Transaction } from '@/types/transaction';
-import type { Goal } from '@/types/goal';
+import { useMemo, useState, useEffect } from 'react';
 import type { ReflectionMetrics, ReflectionSlideData, ReflectionData, ReflectionMonth } from '@/types/reflection';
 import { startOfMonth, endOfMonth, subMonths, format, parseISO } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
 const REFLECTION_STORAGE_KEY = 'zaman.reflection.lastMonth';
+const CUSTOMERS_STORAGE_KEY = 'zaman.customers.v1';
+const ACTIVE_CUSTOMER_KEY = 'zaman.activeCustomerId';
 
-export function useReflection(
-  transactions: Transaction[],
-  goals: Goal[],
-  selectedMonth?: string // YYYY-MM format
-) {
+type StoredTransaction = {
+  id: string;
+  date: string;
+  amount: number;
+  category?: string;
+  merchant?: string;
+  rawMerchant?: string;
+  note?: string;
+};
+
+type StoredGoal = {
+  id: string;
+  title: string;
+  targetAmount: number;
+  currentAmount: number;
+};
+
+type StoredCustomer = {
+  id: string;
+  name: string;
+  txns: StoredTransaction[];
+  goals?: StoredGoal[];
+};
+
+export function useReflection(selectedMonth?: string) {
+  const [transactions, setTransactions] = useState<StoredTransaction[]>([]);
+  const [goals, setGoals] = useState<StoredGoal[]>([]);
   const lastMonth = selectedMonth || getLastSelectedMonth();
+
+  // Read data from localStorage
+  useEffect(() => {
+    try {
+      const activeCustomerId = localStorage.getItem(ACTIVE_CUSTOMER_KEY);
+      const customersJson = localStorage.getItem(CUSTOMERS_STORAGE_KEY);
+      
+      if (!customersJson || !activeCustomerId) {
+        setTransactions([]);
+        setGoals([]);
+        return;
+      }
+
+      const customers: StoredCustomer[] = JSON.parse(customersJson);
+      const activeCustomer = customers.find(c => c.id === activeCustomerId);
+      
+      if (activeCustomer) {
+        setTransactions(activeCustomer.txns || []);
+        setGoals(activeCustomer.goals || []);
+      }
+    } catch (e) {
+      console.error('Failed to load customer data for reflection', e);
+      setTransactions([]);
+      setGoals([]);
+    }
+  }, []);
 
   const reflectionData = useMemo(() => {
     return calculateReflection(transactions, goals, lastMonth);
@@ -44,8 +92,8 @@ function getLastSelectedMonth(): string {
 }
 
 function calculateReflection(
-  transactions: Transaction[],
-  goals: Goal[],
+  transactions: StoredTransaction[],
+  goals: StoredGoal[],
   monthStr: string
 ): ReflectionData {
   const monthDate = parseISO(`${monthStr}-01`);
@@ -97,22 +145,23 @@ function calculateReflection(
   };
 }
 
-function calculateMetrics(txns: Transaction[], goals: Goal[]): ReflectionMetrics {
-  let topUpCount = 0;
+function calculateMetrics(txns: StoredTransaction[], goals: StoredGoal[]): ReflectionMetrics {
+  let incomeCount = 0;
+  let totalIncome = 0;
+  let totalExpense = 0;
   let foodCount = 0;
   let savingsSum = 0;
   let donationsCount = 0;
-  let totalSpend = 0;
   const byCategory: Record<string, number> = {};
 
   txns.forEach(t => {
-    if (t.amount < 0) {
-      // Credit (income/top-up)
-      topUpCount++;
-    } else {
-      // Debit (expense)
+    // amount > 0 = income/top-up, amount < 0 = expense
+    if (t.amount > 0) {
+      incomeCount++;
+      totalIncome += t.amount;
+    } else if (t.amount < 0) {
       const amount = Math.abs(t.amount);
-      totalSpend += amount;
+      totalExpense += amount;
 
       const category = t.category || 'Другое';
       byCategory[category] = (byCategory[category] || 0) + amount;
@@ -125,24 +174,28 @@ function calculateMetrics(txns: Transaction[], goals: Goal[]): ReflectionMetrics
     }
   });
 
-  // Calculate savings from "savings" category transactions
-  savingsSum = byCategory['Другое'] || 0; // Assuming savings are tracked as 'Другое' or specific category
+  // Calculate savings from transactions with 'savings' category and positive amount
+  txns.forEach(t => {
+    if (t.category === 'Другое' && t.amount > 0) { // Assuming savings tracked as specific category
+      savingsSum += t.amount;
+    }
+  });
 
-  // Calculate goal progress (simplified - just show current state)
+  // Calculate goal progress
   const goalProgress = goals.map(g => ({
     goalId: g.id,
     name: g.title,
-    delta: 0, // Could calculate monthly change if we had historical data
+    delta: 0,
     current: g.currentAmount,
     target: g.targetAmount,
   }));
 
   return {
-    topUpCount,
+    topUpCount: incomeCount,
     foodCount,
     savingsSum,
     donationsCount,
-    totalSpend,
+    totalSpend: totalExpense,
     byCategory,
     goalProgress,
     deltaVsPrevious: {
@@ -191,7 +244,11 @@ function generateSlides(metrics: ReflectionMetrics, month: ReflectionMonth): Ref
 
   // Slide 3: Goals (if any)
   if (metrics.goalProgress.length > 0) {
-    const topGoal = metrics.goalProgress[0];
+    // Find goal with largest target amount or first one
+    const topGoal = metrics.goalProgress.reduce((max, g) => 
+      g.target > max.target ? g : max
+    , metrics.goalProgress[0]);
+    
     slides.push({
       type: 'goals',
       title: 'Прогресс к мечтам',

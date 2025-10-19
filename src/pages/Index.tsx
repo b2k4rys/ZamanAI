@@ -153,7 +153,6 @@ const Index = () => {
                   categoryBreakdown={analytics.categoryBreakdown}
                   insights={analytics.insights}
                   transactions={activeCustomer.txns}
-                  goals={goals}
                   activeAnalyticsTab={activeAnalyticsTab}
                   onAnalyticsTabChange={setActiveAnalyticsTab}
                   onInsightAction={handleInsightAction}
@@ -210,8 +209,6 @@ const Index = () => {
       <ReflectionModal
         open={reflectionOpen}
         onOpenChange={setReflectionOpen}
-        transactions={activeCustomer.txns}
-        goals={goals}
         onAction={handleInsightAction}
       />
     </div>

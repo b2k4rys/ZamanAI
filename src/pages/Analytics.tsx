@@ -7,8 +7,7 @@ import { TransactionManager } from "@/components/TransactionManager";
 import { ReflectionModal } from "@/components/ReflectionModal";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Transaction } from "@/types/transaction";
-import { Goal } from "@/types/goal";
+import type { Transaction } from "@/types/transaction";
 import { Sparkles } from "lucide-react";
 
 interface AnalyticsProps {
@@ -18,7 +17,6 @@ interface AnalyticsProps {
   categoryBreakdown: any[];
   insights: any[];
   transactions?: Transaction[];
-  goals?: Goal[];
   activeAnalyticsTab?: string;
   onAnalyticsTabChange?: (tab: string) => void;
   onInsightAction?: (action: string, insight: any) => void;
@@ -31,7 +29,6 @@ export const Analytics = ({
   categoryBreakdown,
   insights,
   transactions = [],
-  goals = [],
   activeAnalyticsTab = "expenses",
   onAnalyticsTabChange,
   onInsightAction,
@@ -110,8 +107,6 @@ export const Analytics = ({
       <ReflectionModal
         open={reflectionOpen}
         onOpenChange={setReflectionOpen}
-        transactions={transactions}
-        goals={goals}
         onAction={onInsightAction}
       />
     </div>

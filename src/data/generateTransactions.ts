@@ -13,16 +13,33 @@ function tx(rawMerchant: string, amount: number, daysAgo: number): Transaction {
   return {
     id: `tx-${Date.now()}-${Math.random()}`,
     date: randomDate(daysAgo),
-    amount: -Math.abs(amount),
+    amount: -Math.abs(amount), // expenses are negative
     rawMerchant,
     merchant,
     category,
   };
 }
 
+// Helper for income (positive amounts)
+function income(description: string, amount: number, daysAgo: number): Transaction {
+  return {
+    id: `tx-${Date.now()}-${Math.random()}`,
+    date: randomDate(daysAgo),
+    amount: Math.abs(amount), // income is positive
+    rawMerchant: description,
+    merchant: description,
+    category: 'Другое',
+  };
+}
+
 // Айдана: молодой специалист, высокий транспорт и подписки
 export function generateAidanaTxns(): Transaction[] {
   return [
+    // Income (monthly salary)
+    income('Зарплата', 350000, 2),
+    income('Зарплата', 350000, 32),
+    income('Зарплата', 350000, 62),
+    
     // Transport (high)
     ...Array.from({ length: 45 }, (_, i) => tx('Yandex Go', 800 + Math.random() * 600, i * 2)),
     tx('Bolt', 1200, 15),
@@ -61,6 +78,11 @@ export function generateAidanaTxns(): Transaction[] {
 // Ерлан: семья, большие расходы на дом и еду
 export function generateErlanTxns(): Transaction[] {
   return [
+    // Income (monthly salary)
+    income('Зарплата', 550000, 1),
+    income('Зарплата', 550000, 31),
+    income('Зарплата', 550000, 61),
+    
     // Home (rent/utilities)
     tx('Аренда квартиры', 150000, 1),
     tx('Алматыэнергосбыт', 18000, 5),
@@ -99,6 +121,11 @@ export function generateErlanTxns(): Transaction[] {
 // Алия: высокая благотворительность, цель - хадж
 export function generateAliyaTxns(): Transaction[] {
   return [
+    // Income (monthly salary)
+    income('Зарплата', 420000, 3),
+    income('Зарплата', 420000, 33),
+    income('Зарплата', 420000, 63),
+    
     // Home
     tx('Аренда', 90000, 1),
     tx('Алматыэнергосбыт', 12000, 6),
@@ -134,6 +161,11 @@ export function generateAliyaTxns(): Transaction[] {
 // Данияр: фриланс, высокие развлечения и подписки, интерес к инвестициям
 export function generateDaniyarTxns(): Transaction[] {
   return [
+    // Income (freelance payments)
+    income('Фриланс проект', 280000, 5),
+    income('Фриланс проект', 320000, 25),
+    income('Фриланс проект', 300000, 55),
+    
     // Food
     ...Array.from({ length: 25 }, (_, i) => tx('Magnum', 4500 + Math.random() * 2500, i * 3)),
     ...Array.from({ length: 15 }, (_, i) => tx('DoDo Pizza', 3000 + Math.random() * 2000, i * 5)),

@@ -4,8 +4,6 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ReflectionCarousel } from './ReflectionCarousel';
 import { useReflection } from '@/hooks/useReflection';
-import type { Transaction } from '@/types/transaction';
-import type { Goal } from '@/types/goal';
 import { Download, Share2, Calendar } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import html2canvas from 'html2canvas';
@@ -15,16 +13,12 @@ import { ru } from 'date-fns/locale';
 interface ReflectionModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  transactions: Transaction[];
-  goals: Goal[];
   onAction?: (action: string, data?: any) => void;
 }
 
 export const ReflectionModal = ({
   open,
   onOpenChange,
-  transactions,
-  goals,
   onAction,
 }: ReflectionModalProps) => {
   // Generate list of last 12 months
@@ -37,7 +31,7 @@ export const ReflectionModal = ({
   });
 
   const [selectedMonth, setSelectedMonth] = useState(months[0].value);
-  const { reflectionData, saveLastMonth } = useReflection(transactions, goals, selectedMonth);
+  const { reflectionData, saveLastMonth } = useReflection(selectedMonth);
 
   const handleMonthChange = (month: string) => {
     setSelectedMonth(month);
@@ -136,10 +130,10 @@ export const ReflectionModal = ({
         </div>
 
         {/* Empty State */}
-        {transactions.length === 0 ? (
+        {reflectionData.metrics.totalSpend === 0 && reflectionData.metrics.topUpCount === 0 ? (
           <div className="text-center py-12">
             <p className="text-lg text-muted-foreground mb-4">
-              Транзакций нет — добавь данные или выбери другой месяц
+              Нет данных за этот период. Выберите другой месяц.
             </p>
             <Button onClick={() => onOpenChange(false)} variant="outline">
               Закрыть
