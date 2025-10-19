@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Mic, Send, Sparkles, Wallet, Trash2, Maximize2, Minimize2 } from "lucide-react";
+import { Mic, Send, Sparkles, Wallet, Trash2, Maximize2, Minimize2, Lightbulb } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Goal } from "@/types/goal";
@@ -10,11 +10,14 @@ import { SalaryEvent, SalaryRule } from "@/types/salary";
 import { GoalAllocationDialog } from "./GoalAllocationDialog";
 import { AssistantMessage } from "./AssistantMessage";
 import { ReminderMessage } from "./ReminderMessage";
+import { TipMessage } from "./TipMessage";
 import { useCustomer } from "@/contexts/CustomerContext";
 import { buildSnapshot, parseAction, type ActionCommand } from "@/lib/customerSnapshot";
 import { callGemini } from "@/lib/geminiApi";
 import { toast } from "@/hooks/use-toast";
 import { useSmartReminders } from "@/hooks/useSmartReminders";
+import { useSmartTips } from "@/hooks/useSmartTips";
+import { Tip } from "@/types/tip";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -44,7 +47,14 @@ type SalarySuggestionMessage = {
   rule: SalaryRule;
 };
 
-type Message = TextMessage | SalarySuggestionMessage;
+type TipMessage = {
+  id: string;
+  role: "assistant";
+  kind: "tip";
+  tip: Tip;
+};
+
+type Message = TextMessage | SalarySuggestionMessage | TipMessage;
 
 interface ChatAssistantProps {
   goals: Goal[];
@@ -77,6 +87,12 @@ export const ChatAssistant = ({
     completeReminder,
     refresh: refreshReminders,
   } = useSmartReminders(activeCustomer.txns, goals, challenges);
+  
+  // Smart tips
+  const {
+    generateTips,
+    markShown,
+  } = useSmartTips(activeCustomer.txns, goals, challenges);
   
   // Chat size management
   const [chatSize, setChatSize] = useChatStorage('zaman.chat.size', DEFAULT_CHAT_SIZE);
@@ -235,6 +251,134 @@ export const ChatAssistant = ({
       rule,
     };
     setMessages((prev) => [...prev, newMessage]);
+  };
+
+  const handleGetTips = () => {
+    const newTips = generateTips();
+    
+    if (newTips.length === 0) {
+      const noTipsMsg: TextMessage = {
+        id: `no-tips-${Date.now()}`,
+        role: 'assistant',
+        kind: 'text',
+        content: 'У меня пока нет новых советов для вас. Всё идёт отлично! 💚',
+      };
+      setMessages(prev => [...prev, noTipsMsg]);
+      return;
+    }
+    
+    // Show top 3 tips
+    const tipsToShow = newTips.slice(0, 3);
+    const tipMessages: TipMessage[] = tipsToShow.map(tip => ({
+      id: `tip-${tip.id}`,
+      role: 'assistant',
+      kind: 'tip',
+      tip,
+    }));
+    
+    setMessages(prev => [...prev, ...tipMessages]);
+    
+    toast({
+      title: "Советы готовы",
+      description: `Показано ${tipsToShow.length} совет(ов)`,
+    });
+  };
+  
+  const handleTipAction = (tip: Tip, action: Tip['actions'][0]) => {
+    const { action: tipAction } = action;
+    
+    let confirmContent = '';
+    
+    switch (tipAction.kind) {
+      case 'pay_bill':
+        confirmContent = `Готово! Перевёл ${tipAction.amount.toLocaleString()} ₸ на оплату ${tipAction.merchant}.`;
+        toast({
+          title: "Счёт оплачен",
+          description: tipAction.merchant,
+        });
+        addTransaction({
+          date: new Date().toISOString(),
+          amount: -tipAction.amount,
+          rawMerchant: tipAction.merchant,
+          note: 'Оплата по совету',
+        });
+        break;
+      
+      case 'open_budget_planner':
+        confirmContent = 'Открываю планировщик бюджета...';
+        toast({
+          title: "Планировщик",
+          description: "Функция в разработке",
+        });
+        break;
+      
+      case 'create_challenge':
+        confirmContent = `Создаю челлендж по ${tipAction.scope.kind === 'category' ? 'категории' : 'мерчанту'} "${tipAction.scope.value}"...`;
+        if (onShowChallenges) {
+          onShowChallenges();
+        }
+        toast({
+          title: "Создание челленджа",
+          description: "Открывайте страницу Челленджи",
+        });
+        break;
+      
+      case 'set_limit':
+        confirmContent = `Лимит установлен: ${tipAction.monthly.toLocaleString()} ₸ в месяц.`;
+        toast({
+          title: "Лимит установлен",
+          description: `${tipAction.monthly.toLocaleString()} ₸/мес`,
+        });
+        break;
+      
+      case 'transfer_to_goal':
+        const goal = goals.find(g => g.id === tipAction.goalId);
+        if (goal) {
+          onContribute(tipAction.goalId, tipAction.amount, new Date().toISOString());
+          addTransaction({
+            date: new Date().toISOString(),
+            amount: -tipAction.amount,
+            rawMerchant: `Накопление: ${goal.title}`,
+            note: 'Перевод по совету',
+          });
+          confirmContent = `Перевёл ${tipAction.amount.toLocaleString()} ₸ на вашу цель «${goal.title}».`;
+          toast({
+            title: "Цель пополнена",
+            description: `${tipAction.amount.toLocaleString()} ₸`,
+          });
+        }
+        break;
+      
+      case 'open_subscriptions':
+        confirmContent = 'Открываю список подписок...';
+        toast({
+          title: "Подписки",
+          description: "Перейдите в Аналитику",
+        });
+        break;
+      
+      case 'snooze':
+        confirmContent = `Напомню через ${tipAction.hours} ч.`;
+        toast({
+          title: "Отложено",
+          description: `Напомню через ${tipAction.hours} ч`,
+        });
+        break;
+    }
+    
+    // Mark tip as shown
+    markShown(tip.id);
+    
+    // Add confirmation message
+    if (confirmContent) {
+      const confirmMsg: TextMessage = {
+        id: `tip-confirm-${Date.now()}`,
+        role: 'assistant',
+        kind: 'text',
+        content: confirmContent,
+      };
+      setMessages(prev => [...prev, confirmMsg]);
+    }
   };
 
   const handleSimulateSalary = () => {
@@ -604,15 +748,26 @@ ACTIVE_CUSTOMER_SNAPSHOT:${JSON.stringify(snapshot)}`;
             </Button>
           </div>
         </div>
-        <Button
-          onClick={handleSimulateSalary}
-          size="sm"
-          variant="outline"
-          className="w-full gap-2 hover:bg-accent"
-        >
-          <Wallet className="h-4 w-4" />
-          Симулировать поступление зарплаты
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            onClick={handleGetTips}
+            size="sm"
+            variant="outline"
+            className="flex-1 gap-2 hover:bg-accent"
+          >
+            <Lightbulb className="h-4 w-4" />
+            Советы от ассистента
+          </Button>
+          <Button
+            onClick={handleSimulateSalary}
+            size="sm"
+            variant="outline"
+            className="flex-1 gap-2 hover:bg-accent"
+          >
+            <Wallet className="h-4 w-4" />
+            Симулировать зарплату
+          </Button>
+        </div>
       </div>
 
       <div className="flex-1 space-y-4 overflow-y-auto p-4 scroll-smooth">
@@ -660,7 +815,7 @@ ACTIVE_CUSTOMER_SNAPSHOT:${JSON.stringify(snapshot)}`;
           }
 
           // Typing indicator
-          if (message.id === "typing" && message.content === "typing...") {
+          if (message.kind === "text" && message.id === "typing" && message.content === "typing...") {
             return (
               <div key={message.id} className="flex justify-start fade-in">
                 <Card className="max-w-[80%] bg-accent p-4 text-accent-foreground">
@@ -698,11 +853,11 @@ ACTIVE_CUSTOMER_SNAPSHOT:${JSON.stringify(snapshot)}`;
                     <span className="text-xs font-semibold text-primary">Zaman AI</span>
                   </div>
                 )}
-                {message.role === "assistant" ? (
+                {message.role === "assistant" && message.kind === "text" ? (
                   <AssistantMessage content={message.content} />
-                ) : (
+                ) : message.kind === "text" ? (
                   <p className="text-sm leading-relaxed">{message.content}</p>
-                )}
+                ) : null}
               </Card>
             </div>
           );

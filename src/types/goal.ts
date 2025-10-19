@@ -6,6 +6,7 @@ export type Goal = {
   deadline: string;
   monthlyPlan: number;
   icon: string;
+  status?: 'active' | 'completed' | 'paused';
 };
 
 export type GoalPoint = { 
