@@ -10,6 +10,7 @@ import { GoalAllocationDialog } from "./GoalAllocationDialog";
 import { AssistantMessage } from "./AssistantMessage";
 import { useCustomer } from "@/contexts/CustomerContext";
 import { buildSnapshot, parseAction, type ActionCommand } from "@/lib/customerSnapshot";
+import { callGemini } from "@/lib/geminiApi";
 import { toast } from "@/hooks/use-toast";
 import {
   AlertDialog,
@@ -344,10 +345,10 @@ export const ChatAssistant = ({
       const snapshot = buildSnapshot(activeCustomer, goals);
       
       // Build conversation history for context
-      const conversationHistory = messages
+      const conversationHistory: Array<{ role: "user" | "assistant"; content: string }> = messages
         .filter(m => m.kind === "text")
         .map(m => ({
-          role: m.role === "user" ? "user" : "assistant",
+          role: (m.role === "user" ? "user" : "assistant") as "user" | "assistant",
           content: m.content,
         }));
 
@@ -375,31 +376,15 @@ export const ChatAssistant = ({
 После рекомендации всегда предлагай действие:
 "Хотите, я покажу план накоплений? 📊"
 "Может, посмотрим, где можно сократить расходы? 💡"
-"Подключить халяль-депозит под эту цель? 💰"`;
+"Подключить халяль-депозит под эту цель? 💰"
 
-      const response = await fetch("https://openai-hub.neuraldeep.tech/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": "Bearer sk-roG3OusRr0TLCHAADks6lw",
-        },
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "system", content: `ACTIVE_CUSTOMER_SNAPSHOT:${JSON.stringify(snapshot)}` },
-            ...conversationHistory,
-            { role: "user", content: userMessage },
-          ],
-        }),
-      });
+ACTIVE_CUSTOMER_SNAPSHOT:${JSON.stringify(snapshot)}`;
 
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status}`);
-      }
-
-      const data = await response.json();
-      const reply = data.choices?.[0]?.message?.content || "Извините, не могу ответить.";
+      const reply = await callGemini([
+        { role: "system", content: systemPrompt },
+        ...conversationHistory,
+        { role: "user", content: userMessage },
+      ]);
 
       // Parse action from response
       const action = parseAction(reply);
@@ -434,7 +419,9 @@ export const ChatAssistant = ({
           id: `error-${Date.now()}`,
           role: "assistant",
           kind: "text",
-          content: "Кажется, соединение нестабильно. Попробуем снова?",
+          content: error instanceof Error 
+            ? error.message
+            : "Кажется, соединение нестабильно. Попробуем снова?",
         };
         return [...filtered, errorMsg];
       });
